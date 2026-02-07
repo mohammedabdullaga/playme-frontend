@@ -11,6 +11,11 @@ export default function Navbar() {
   return (
     <nav>
       <Link to="/dashboard">Dashboard</Link>
+      <Link to="/subscriptions">Subscriptions</Link>
+      <Link to="/heartbeat">Heartbeat</Link>
+      <Link to="/activate">Activate Device</Link>
+      <Link to="/messages">Messages</Link>
+      <Link to="/status">App Status</Link>
       <Link to="/tokens">Tokens</Link>
       <Link to="/devices">Devices</Link>
       <Link to="/proxy">Proxy</Link>

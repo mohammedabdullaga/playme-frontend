@@ -20,26 +20,48 @@ export default function Proxy() {
   };
 
   return (
-    <div>
+    <div className="panel">
       <h2>Proxy Control</h2>
 
-      <select value={mode} onChange={e => setMode(e.target.value)}>
-        <option value="direct">Direct (DPI)</option>
-        <option value="socks5">SOCKS5</option>
-      </select>
+      <div className="form-section">
+        <div className="form-group">
+          <label>Mode</label>
+          <select value={mode} onChange={e => setMode(e.target.value)}>
+            <option value="direct">Direct (No Proxy)</option>
+            <option value="socks5">SOCKS5</option>
+          </select>
+        </div>
 
-      {mode === "socks5" && (
-        <>
-          <input placeholder="Host" onChange={e => setHost(e.target.value)} />
-          <input placeholder="Port" onChange={e => setPort(e.target.value)} />
-          <input placeholder="User" onChange={e => setUser(e.target.value)} />
-          <input placeholder="Pass" onChange={e => setPass(e.target.value)} />
-        </>
+        {mode === "socks5" && (
+          <>
+            <div className="form-group">
+              <label>Host</label>
+              <input placeholder="1.2.3.4" onChange={e => setHost(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Port</label>
+              <input type="number" placeholder="1080" onChange={e => setPort(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Username</label>
+              <input placeholder="(optional)" onChange={e => setUser(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>Password</label>
+              <input type="password" placeholder="(optional)" onChange={e => setPass(e.target.value)} />
+            </div>
+          </>
+        )}
+
+        <button className="btn-primary" onClick={save}>Apply Proxy Configuration</button>
+      </div>
+
+      {result && (
+        <div style={{ marginTop: '20px' }}>
+          <h3>Configuration Result</h3>
+          <pre>{JSON.stringify(result, null, 2)}</pre>
+        </div>
       )}
-
-      <button onClick={save}>Apply</button>
-
-      {result && <pre>{JSON.stringify(result, null, 2)}</pre>}
     </div>
   );
 }
