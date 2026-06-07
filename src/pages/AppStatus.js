@@ -49,75 +49,76 @@ export default function AppStatus() {
   };
 
   return (
-    <div className="rounded-3xl bg-white p-8 shadow-xl ring-1 ring-slate-200 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-semibold text-slate-900">App Status Control</h2>
+    <div className="panel-card max-w-4xl mx-auto">
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">App Status</h2>
+          <p className="page-subtitle">Control global access and expiration for the Playme service.</p>
+        </div>
+        <span className={`status-pill ${allowed ? "status-pill-success" : "status-pill-danger"}`}>
+          {allowed ? "Allowed" : "Denied"}
+        </span>
+      </div>
 
       {error && <div className="alert alert-error">{error}</div>}
       {success && <div className="alert alert-success">{success}</div>}
 
-      <div className="mt-6 space-y-6 rounded-3xl bg-slate-50 p-6 ring-1 ring-slate-200">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900">Application Access</h3>
-          <p className="mt-2 text-sm text-slate-600">Control whether devices can access the Playme service globally with optional expiration.</p>
-        </div>
-
+      <div className="status-panel">
         {loading ? (
           <p className="text-sm text-slate-500">Loading...</p>
         ) : (
           <>
-            <div className={`rounded-3xl p-6 text-center ${allowed ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"}`}>
-              <h3 className={`text-xl font-semibold ${allowed ? "text-emerald-700" : "text-red-700"}`}>
-                {allowed ? "🟢 ALLOWED" : "🔴 DENIED"}
-              </h3>
-              <p className={`mt-2 text-sm ${allowed ? "text-emerald-700" : "text-red-700"}`}>
-                {allowed ? "Devices can access the app" : "Devices cannot access the app"}
+            <div className={`status-card ${allowed ? "status-card-success" : "status-card-danger"}`}>
+              <h3 className="token-panel-title">{allowed ? "Global access is enabled" : "Global access is disabled"}</h3>
+              <p className="token-panel-subtitle">
+                {allowed ? "Devices can connect to the Playme service." : "Devices are currently blocked from accessing the Playme service."}
               </p>
             </div>
 
-            {expiresAt && (
-              <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
-                <strong>Expires at:</strong> {formatTime(expiresAt)}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="info-panel">
+                <p className="text-sm font-semibold text-slate-700">Expiration</p>
+                <p className="mt-2 text-base text-slate-900">{expiresAt ? formatTime(expiresAt) : "No expiration set"}</p>
               </div>
-            )}
+              <div className="form-group">
+                <label className="form-label">Expiration Date / Time (optional)</label>
+                <input
+                  type="datetime-local"
+                  value={expiresAt ? new Date(expiresAt).toISOString().slice(0, 16) : ""}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setExpiresAt(new Date(e.target.value).toISOString());
+                    } else {
+                      setExpiresAt("");
+                    }
+                  }}
+                  className="form-input"
+                />
+              </div>
+            </div>
 
-            <div className="space-y-3">
-              <label className="block text-sm font-semibold text-slate-700">Expiration Date/Time (optional)</label>
-              <input
-                type="datetime-local"
-                value={expiresAt ? new Date(expiresAt).toISOString().slice(0, 16) : ""}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    setExpiresAt(new Date(e.target.value).toISOString());
-                  } else {
-                    setExpiresAt("");
-                  }
-                }}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
-              />
+            <div className="button-grid">
+              <button
+                className="button button-success w-full"
+                onClick={() => updateStatus(true)}
+                disabled={loading}
+              >
+                ✓ Allow Access
+              </button>
+              <button
+                className="button button-danger w-full"
+                onClick={() => updateStatus(false)}
+                disabled={loading}
+              >
+                ✕ Deny Access
+              </button>
+            </div>
+
+            <div className="info-panel info-panel-muted">
+              <strong>Note:</strong> This setting controls global access for all devices. When set to Denied, all devices will receive an access denied response. Optionally set an expiration for the status change.
             </div>
           </>
         )}
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <button
-            className={allowed ? "btn-secondary w-full" : "btn-success w-full"}
-            onClick={() => updateStatus(true)}
-            disabled={loading}
-          >
-            ✓ Allow Access
-          </button>
-          <button
-            className={allowed ? "btn-danger w-full" : "btn-secondary w-full"}
-            onClick={() => updateStatus(false)}
-            disabled={loading}
-          >
-            ✕ Deny Access
-          </button>
-        </div>
-
-        <div className="rounded-2xl bg-sky-50 border border-sky-200 p-4 text-sm text-slate-700">
-          <strong>Note:</strong> This setting controls global app access for all devices. When set to DENIED, all devices will receive access denied responses. You can optionally set an expiration time for the access status.
-        </div>
       </div>
     </div>
   );

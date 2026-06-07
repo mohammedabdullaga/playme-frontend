@@ -5,61 +5,101 @@ export default function Tokens() {
   const [days, setDays] = useState(30);
   const [count, setCount] = useState(1);
   const [tokens, setTokens] = useState([]);
+  const [copyMessage, setCopyMessage] = useState("");
+  const [copiedToken, setCopiedToken] = useState("");
 
   const create = async () => {
-    const res = await API.post(`/admin/tokens?days=${days}&count=${count}`);
-    setTokens(res.data.tokens);
+    const res = await API.post(`/admin/tokens?days=${Number(days)}&count=${Number(count)}`);
+    setTokens(res.data.tokens || []);
+    setCopiedToken("");
+    setCopyMessage("");
+  };
+
+  const showCopyMessage = (message) => {
+    setCopyMessage(message);
+    window.clearTimeout(window.copyMessageTimeout);
+    window.copyMessageTimeout = window.setTimeout(() => setCopyMessage(""), 2200);
+  };
+
+  const copyToken = async (token) => {
+    await navigator.clipboard.writeText(token);
+    setCopiedToken(token);
+    showCopyMessage("Token copied to clipboard");
+  };
+
+  const copyAll = async () => {
+    const bulk = tokens.join("\n");
+    await navigator.clipboard.writeText(bulk);
+    setCopiedToken("all");
+    showCopyMessage(`Copied all ${tokens.length} tokens`);
   };
 
   return (
-    <div className="rounded-3xl bg-white p-8 shadow-xl ring-1 ring-slate-200 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-semibold text-slate-900">Create Tokens</h2>
-      <div className="mt-6 space-y-6">
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-slate-700">Token Duration (days)</label>
-            <input
-              type="number"
-              value={days}
-              onChange={(e) => setDays(e.target.value)}
-              min="1"
-              className="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-slate-700">Number of Tokens to Create</label>
-            <input
-              type="number"
-              value={count}
-              onChange={(e) => setCount(e.target.value)}
-              min="1"
-              className="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
-            />
-          </div>
+    <div className="panel-card max-w-4xl mx-auto">
+      <div className="page-header">
+        <div>
+          <h2 className="page-title">Token Management</h2>
+          <p className="page-subtitle">Create and copy access tokens for your admin users.</p>
         </div>
-
-        <button className="inline-flex items-center justify-center rounded-2xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700" onClick={create}>
+        <button className="button button-secondary" onClick={create}>
           Generate Tokens
         </button>
       </div>
 
+      <div className="form-section grid gap-6 md:grid-cols-2">
+        <div>
+          <label className="form-label">Token Duration (days)</label>
+          <input
+            type="number"
+            value={days}
+            onChange={(e) => setDays(Math.max(1, Number(e.target.value) || 1))}
+            min="1"
+            className="form-input"
+          />
+        </div>
+
+        <div>
+          <label className="form-label">Number of Tokens to Create</label>
+          <input
+            type="number"
+            value={count}
+            onChange={(e) => setCount(Math.max(1, Number(e.target.value) || 1))}
+            min="1"
+            className="form-input"
+          />
+        </div>
+      </div>
+
       {tokens.length > 0 && (
-        <div className="mt-10 rounded-3xl bg-slate-50 p-6 ring-1 ring-slate-200">
-          <h3 className="text-xl font-semibold text-slate-900">Generated Tokens ({tokens.length})</h3>
-          <div className="mt-4 flex flex-wrap gap-3">
+        <section className="token-panel">
+          <div className="token-panel-header">
+            <div>
+              <h3 className="token-panel-title">Generated Tokens</h3>
+              <p className="token-panel-subtitle">Click any token to copy it, or copy them all at once.</p>
+            </div>
+            <button className="button button-primary" onClick={copyAll}>
+              Copy all ({tokens.length})
+            </button>
+          </div>
+
+          {copyMessage && (
+            <div className="copy-status">{copyMessage}</div>
+          )}
+
+          <div className="token-grid">
             {tokens.map((t) => (
               <button
                 key={t}
-                className="token-badge"
-                onClick={() => navigator.clipboard.writeText(t)}
+                className={`token-badge${copiedToken === t ? " active" : ""}`}
+                onClick={() => copyToken(t)}
                 title="Click to copy"
               >
-                {t}
+                <span className="token-text">{t}</span>
+                <span className="token-action">Copy</span>
               </button>
             ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

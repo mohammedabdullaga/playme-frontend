@@ -18,8 +18,9 @@ function App() {
       <div className="min-h-screen bg-slate-100 text-slate-900 antialiased">
         <div className="app-grid">
           <Navbar />
-          <main className="p-4 md:p-6 lg:p-8">
-            <Routes>
+          <main className="page-shell">
+            <div className="page-body">
+              <Routes>
               <Route path="/" element={<Login />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/tokens" element={<ProtectedRoute><Tokens /></ProtectedRoute>} />
@@ -31,6 +32,7 @@ function App() {
               <Route path="/status" element={<ProtectedRoute><AppStatus /></ProtectedRoute>} />
               <Route path="/proxy" element={<ProtectedRoute><Proxy /></ProtectedRoute>} />
             </Routes>
+            </div>
           </main>
         </div>
       </div>
