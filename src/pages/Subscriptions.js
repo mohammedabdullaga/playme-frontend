@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import API, { adminGetDevices, adminDeactivateDevice } from "../api/api";
+import { adminGetDevices, adminDeactivateDevice } from "../api/api";
 
 export default function Subscriptions() {
   const navigate = useNavigate();
@@ -39,10 +39,9 @@ export default function Subscriptions() {
     const map = {};
     (devices || []).forEach((d) => {
       const e = d.email || "(no email)";
-      if (!map[e]) map[e] = { email: e, count: 0, active: 0, devices: [] };
+      if (!map[e]) map[e] = { email: e, count: 0, active: 0 };
       map[e].count += 1;
       if (d.active) map[e].active += 1;
-      map[e].devices.push(d);
     });
     return Object.values(map);
   }, [devices]);
@@ -63,10 +62,13 @@ export default function Subscriptions() {
   };
 
   return (
-    <div className="panel">
-      <h2>Subscriptions</h2>
+    <div className="rounded-3xl bg-white p-8 shadow-xl ring-1 ring-slate-200">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <h2 className="text-2xl font-semibold text-slate-900">Subscriptions</h2>
+        <p className="text-sm text-slate-500">Filter and manage subscription devices with quick action controls.</p>
+      </div>
 
-      <div className="filters">
+      <div className="filters mt-6">
         <input
           placeholder="Search by MAC or email"
           value={query}
@@ -84,36 +86,34 @@ export default function Subscriptions() {
         </select>
       </div>
 
-      <div className="grid">
-        <div className="grid-col">
-          <h3>Devices ({filtered.length})</h3>
-          <div className="table-wrapper">
-            <table className="devices-table">
+      <div className="mt-6 subscriptions-layout grid gap-6">
+        <section className="rounded-3xl bg-slate-50 p-6 ring-1 ring-slate-200">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-slate-900">Devices ({filtered.length})</h3>
+          </div>
+          <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-full border-collapse text-sm">
               <thead>
-                <tr>
-                  <th>MAC</th>
-                  <th>Email</th>
-                  <th>Token ID</th>
-                  <th>Type</th>
-                  <th>First Seen</th>
-                  <th>Last Seen</th>
-                  <th>Expires</th>
-                  <th>Active</th>
-                  <th>Action</th>
+                <tr className="bg-slate-100 text-left text-slate-500 uppercase tracking-[0.15em] text-[11px]">
+                  <th className="px-4 py-3">MAC</th>
+                  <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3">First Seen</th>
+                  <th className="px-4 py-3">Expires</th>
+                  <th className="px-4 py-3">Active</th>
+                  <th className="px-4 py-3">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((d) => (
                   <tr key={d.mac_address} className={d.active ? "active-row" : "inactive-row"}>
-                    <td className="mono">{d.mac_address}</td>
-                    <td>{d.email}</td>
-                    <td className="mono">{d.token_id || "-"}</td>
-                    <td><span className={`badge ${d.is_trial ? "badge-trial" : "badge-paid"}`}>{d.is_trial ? "Trial" : "Paid"}</span></td>
-                    <td>{formatTime(d.created_at)}</td>
-                    <td>{formatTime(d.last_seen)}</td>
-                    <td>{formatTime(d.expires_at)}</td>
-                    <td><span className={`status ${d.active ? "status-active" : "status-inactive"}`}>{d.active ? "✓" : "✗"}</span></td>
-                    <td>
+                    <td className="px-4 py-4 font-mono text-slate-700">{d.mac_address}</td>
+                    <td className="px-4 py-4 text-slate-700">{d.email}</td>
+                    <td className="px-4 py-4"><span className={`badge ${d.is_trial ? "badge-trial" : "badge-paid"}`}>{d.is_trial ? "Trial" : "Paid"}</span></td>
+                    <td className="px-4 py-4 text-slate-700">{formatTime(d.created_at)}</td>
+                    <td className="px-4 py-4 text-slate-700">{formatTime(d.expires_at)}</td>
+                    <td className="px-4 py-4"><span className={`status ${d.active ? "status-active" : "status-inactive"}`}>{d.active ? "✓" : "✗"}</span></td>
+                    <td className="px-4 py-4 space-x-2">
                       {d.active && (
                         <button className="btn-danger btn-sm" onClick={() => deactivate(d.mac_address)}>
                           Deactivate
@@ -123,7 +123,6 @@ export default function Subscriptions() {
                         <button
                           className="btn-success btn-sm"
                           onClick={() => navigate(`/activate?mac=${d.mac_address}&email=${encodeURIComponent(d.email)}`)}
-                          style={{ marginLeft: "4px" }}
                         >
                           Activate
                         </button>
@@ -134,33 +133,35 @@ export default function Subscriptions() {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
 
-        <div className="grid-col">
-          <h3>Users ({users.length})</h3>
-          <div className="table-wrapper">
-            <table className="users-table">
+        <section className="rounded-3xl bg-slate-50 p-6 ring-1 ring-slate-200">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-slate-900">Users ({users.length})</h3>
+          </div>
+          <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-full border-collapse text-sm">
               <thead>
-                <tr>
-                  <th>Email</th>
-                  <th>Total</th>
-                  <th>Active</th>
-                  <th>Inactive</th>
+                <tr className="bg-slate-100 text-left text-slate-500 uppercase tracking-[0.15em] text-[11px]">
+                  <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Total</th>
+                  <th className="px-4 py-3">Active</th>
+                  <th className="px-4 py-3">Inactive</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.email}>
-                    <td>{u.email}</td>
-                    <td>{u.count}</td>
-                    <td><span className="status-badge active">{u.active}</span></td>
-                    <td><span className="status-badge inactive">{u.count - u.active}</span></td>
+                    <td className="px-4 py-4 text-slate-700">{u.email}</td>
+                    <td className="px-4 py-4 text-slate-700">{u.count}</td>
+                    <td className="px-4 py-4"><span className="status-badge active">{u.active}</span></td>
+                    <td className="px-4 py-4"><span className="status-badge inactive">{u.count - u.active}</span></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
