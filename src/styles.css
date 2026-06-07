@@ -467,26 +467,43 @@ div > h2 {
   min-height: 100vh;
   background: linear-gradient(180deg, #0c1220 0%, #111827 100%);
   color: #e2e8f0;
-  padding: 32px 24px;
-  gap: 32px;
+  padding: 22px 16px;
+  gap: 20px;
+}
+
+.sidebar-width {
+  width: 100%;
+  max-width: 280px;
+}
+
+@media (min-width: 768px) {
+  .app-grid {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+
+  .sidebar-width {
+    width: 260px;
+  }
 }
 
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .brand-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
   display: grid;
   place-items: center;
   background: #2563eb;
   color: white;
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: 1rem;
 }
 
 .brand-title {
@@ -504,14 +521,14 @@ div > h2 {
 .sidebar-menu {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 18px;
   flex: 1;
 }
 
 .nav-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .nav-title {
@@ -523,10 +540,10 @@ div > h2 {
 
 .nav-item {
   display: block;
-  padding: 0.95rem 1.1rem;
-  border-radius: 18px;
+  padding: 0.82rem 0.95rem;
+  border-radius: 16px;
   color: #dbeafe;
-  font-size: 0.95rem;
+  font-size: 0.93rem;
   text-decoration: none;
   transition: background 0.2s ease, transform 0.2s ease;
 }
