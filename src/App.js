@@ -15,19 +15,23 @@ import ProtectedRoute from "./components/ProtectedRoute";
 function App() {
   return (
     <BrowserRouter>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/tokens" element={<ProtectedRoute><Tokens /></ProtectedRoute>} />
-        <Route path="/devices" element={<ProtectedRoute><Devices /></ProtectedRoute>} />
-        <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
-        <Route path="/activate" element={<ProtectedRoute><ActivateDevice /></ProtectedRoute>} />
-        <Route path="/heartbeat" element={<ProtectedRoute><Heartbeat /></ProtectedRoute>} />
-        <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-        <Route path="/status" element={<ProtectedRoute><AppStatus /></ProtectedRoute>} />
-        <Route path="/proxy" element={<ProtectedRoute><Proxy /></ProtectedRoute>} />
-      </Routes>
+      <div className="app-shell">
+        <Navbar />
+        <main className="main-content">
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/tokens" element={<ProtectedRoute><Tokens /></ProtectedRoute>} />
+            <Route path="/devices" element={<ProtectedRoute><Devices /></ProtectedRoute>} />
+            <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
+            <Route path="/activate" element={<ProtectedRoute><ActivateDevice /></ProtectedRoute>} />
+            <Route path="/heartbeat" element={<ProtectedRoute><Heartbeat /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="/status" element={<ProtectedRoute><AppStatus /></ProtectedRoute>} />
+            <Route path="/proxy" element={<ProtectedRoute><Proxy /></ProtectedRoute>} />
+          </Routes>
+        </main>
+      </div>
     </BrowserRouter>
   );
 }

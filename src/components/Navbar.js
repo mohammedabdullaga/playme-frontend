@@ -9,17 +9,39 @@ export default function Navbar() {
   if (!localStorage.getItem("admin_key")) return null;
 
   return (
-    <nav>
-      <Link to="/dashboard">Dashboard</Link>
-      <Link to="/subscriptions">Subscriptions</Link>
-      <Link to="/heartbeat">Heartbeat</Link>
-      <Link to="/activate">Activate Device</Link>
-      <Link to="/messages">Messages</Link>
-      <Link to="/status">App Status</Link>
-      <Link to="/tokens">Tokens</Link>
-      <Link to="/devices">Devices</Link>
-      <Link to="/proxy">Proxy</Link>
-      <button onClick={logout}>Logout</button>
-    </nav>
+    <aside className="sidebar">
+      <div className="sidebar-brand">
+        <div className="brand-mark">▶</div>
+        <div>
+          <h1>Playme Admin</h1>
+          <p>Control panel</p>
+        </div>
+      </div>
+
+      <div className="sidebar-group">
+        <div className="sidebar-group-title">Overview</div>
+        <Link className="sidebar-link" to="/dashboard">Dashboard</Link>
+      </div>
+
+      <div className="sidebar-group">
+        <div className="sidebar-group-title">Management</div>
+        <Link className="sidebar-link" to="/subscriptions">Subscriptions</Link>
+        <Link className="sidebar-link" to="/devices">Devices</Link>
+        <Link className="sidebar-link" to="/tokens">Tokens</Link>
+        <Link className="sidebar-link" to="/activate">Activate Device</Link>
+        <Link className="sidebar-link" to="/proxy">Proxy</Link>
+      </div>
+
+      <div className="sidebar-group">
+        <div className="sidebar-group-title">Monitoring</div>
+        <Link className="sidebar-link" to="/heartbeat">Heartbeat</Link>
+        <Link className="sidebar-link" to="/status">App Status</Link>
+        <Link className="sidebar-link" to="/messages">Messages</Link>
+      </div>
+
+      <div className="sidebar-footer">
+        <button className="btn-ghost" onClick={logout}>Logout</button>
+      </div>
+    </aside>
   );
 }
