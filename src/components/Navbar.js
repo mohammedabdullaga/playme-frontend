@@ -1,19 +1,57 @@
-import { NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import API from "../api/api";
 
 export default function Navbar() {
-  const logout = () => {
-    localStorage.removeItem("admin_key");
-    window.location.href = "/";
-  };
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [valid, setValid] = useState(true);
+  const [open, setOpen] = useState(false);
+  const key = localStorage.getItem("admin_key");
 
-  if (!localStorage.getItem("admin_key")) return null;
+  useEffect(() => {
+    if (!key) {
+      setValid(false);
+      return;
+    }
+
+    let mounted = true;
+    API.get("/admin/app/status")
+      .then(() => {
+        if (mounted) setValid(true);
+      })
+      .catch(() => {
+        localStorage.removeItem("admin_key");
+        if (mounted) {
+          setValid(false);
+          navigate("/");
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [key, navigate]);
+
+  if (!key || !valid) return null;
 
   const getLinkClass = ({ isActive }) =>
     `nav-item${isActive ? " active" : ""}`;
 
+  const logout = () => {
+    localStorage.removeItem("admin_key");
+    navigate("/");
+  };
+
   return (
-    <aside className="sidebar sidebar-width">
-      <div className="sidebar-brand">
+    <>
+      <div className="mobile-nav-trigger">
+        <button className="mobile-menu-button" onClick={() => setOpen((prev) => !prev)}>
+          {open ? "Close menu" : "Open menu"}
+        </button>
+      </div>
+      <aside className={`sidebar sidebar-width ${open ? "mobile-open" : ""}`}>
+        <div className="sidebar-brand">
         <div className="brand-icon">P</div>
         <div>
           <h1 className="brand-title">Playme Admin</h1>
@@ -31,6 +69,7 @@ export default function Navbar() {
           <p className="nav-title">Management</p>
           <NavLink className={getLinkClass} to="/subscriptions">Subscriptions</NavLink>
           <NavLink className={getLinkClass} to="/devices">Devices</NavLink>
+          <NavLink className={getLinkClass} to="/users">Users</NavLink>
           <NavLink className={getLinkClass} to="/tokens">Tokens</NavLink>
           <NavLink className={getLinkClass} to="/activate">Activate Device</NavLink>
           <NavLink className={getLinkClass} to="/proxy">Proxy</NavLink>
@@ -48,5 +87,6 @@ export default function Navbar() {
         <button className="logout-button" onClick={logout}>Logout</button>
       </div>
     </aside>
-  );
+  </>
+);
 }

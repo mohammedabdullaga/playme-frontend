@@ -1,0 +1,341 @@
+import { useEffect, useState } from "react";
+import { adminGetAccounts, adminGetAccount, adminUpdateAccount, adminDeleteAccount } from "../api/api";
+
+export default function Users() {
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editEmail, setEditEmail] = useState("");
+  const [editExtenDays, setEditExtenDays] = useState("");
+  const [editActive, setEditActive] = useState(true);
+  const [editMessage, setEditMessage] = useState("");
+  const [editMessageType, setEditMessageType] = useState("");
+  const [accountDetails, setAccountDetails] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  const fetchAccounts = async () => {
+    try {
+      setLoading(true);
+      const res = await adminGetAccounts();
+      setAccounts(res.data.accounts || []);
+    } catch (error) {
+      setEditMessage("Failed to load accounts");
+      setEditMessageType("error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openDetails = async (account) => {
+    try {
+      setDetailsLoading(true);
+      const res = await adminGetAccount(account.email);
+      setAccountDetails(res.data);
+      setSelectedAccount(account);
+      setShowDetails(true);
+      setEditMode(false);
+      setEditMessage("");
+    } catch (error) {
+      setEditMessage("Failed to load account details");
+      setEditMessageType("error");
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const startEdit = () => {
+    setEditEmail(selectedAccount?.email || "");
+    setEditExtenDays("");
+    setEditActive(true);
+    setEditMode(true);
+    setEditMessage("");
+  };
+
+  const cancelEdit = () => {
+    setEditMode(false);
+    setEditMessage("");
+  };
+
+  const saveEdit = async () => {
+    if (!selectedAccount) return;
+    try {
+      const payload = {};
+      if (editEmail && editEmail !== selectedAccount.email) {
+        payload.new_email = editEmail;
+      }
+      if (editExtenDays) {
+        payload.extend_days = Number(editExtenDays);
+      }
+      payload.active = editActive;
+
+      await adminUpdateAccount(selectedAccount.email, payload);
+      setEditMessage("Account updated successfully");
+      setEditMessageType("success");
+      setEditMode(false);
+      
+      // Refresh the account details
+      setTimeout(() => {
+        openDetails(selectedAccount);
+        fetchAccounts();
+      }, 1000);
+    } catch (error) {
+      setEditMessage(error.response?.data?.detail || "Failed to update account");
+      setEditMessageType("error");
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (!selectedAccount) return;
+    if (!window.confirm(`Are you sure you want to delete all devices for ${selectedAccount.email}?`)) {
+      return;
+    }
+    try {
+      await adminDeleteAccount(selectedAccount.email);
+      setEditMessage("Account deleted successfully");
+      setEditMessageType("success");
+      setShowDetails(false);
+      setSelectedAccount(null);
+      fetchAccounts();
+    } catch (error) {
+      setEditMessage(error.response?.data?.detail || "Failed to delete account");
+      setEditMessageType("error");
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    return d.toLocaleString();
+  };
+
+  const isExpired = (expiresAt) => {
+    if (!expiresAt) return false;
+    return new Date(expiresAt) < new Date();
+  };
+
+  return (
+    <div className="panel">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <h2 className="text-2xl font-semibold text-slate-900">User Accounts ({accounts.length})</h2>
+        <p className="text-sm text-slate-500">View and manage user accounts, their devices, and associated tokens.</p>
+      </div>
+
+      {!showDetails ? (
+        <div>
+          {loading ? (
+            <p className="text-center text-slate-500 py-8">Loading accounts...</p>
+          ) : accounts.length === 0 ? (
+            <p className="text-center text-slate-500 py-8">No accounts found</p>
+          ) : (
+            <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 shadow-sm">
+              <table className="min-w-full border-collapse text-sm">
+                <thead>
+                  <tr className="bg-slate-100 text-left text-slate-500 uppercase tracking-[0.15em] text-[11px]">
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Devices</th>
+                    <th className="px-4 py-3">Active</th>
+                    <th className="px-4 py-3">Tokens</th>
+                    <th className="px-4 py-3">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accounts.map((account) => (
+                    <tr key={account.email} className={account.active_device_count > 0 ? "active-row" : "inactive-row"}>
+                      <td className="px-4 py-4 font-mono text-slate-700">{account.email}</td>
+                      <td className="px-4 py-4 text-slate-700">{account.device_count}</td>
+                      <td className="px-4 py-4 text-slate-700">{account.active_device_count}</td>
+                      <td className="px-4 py-4 text-slate-700">{account.token_count}</td>
+                      <td className="px-4 py-4">
+                        <button
+                          className="btn-primary btn-sm"
+                          onClick={() => openDetails(account)}
+                        >
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <button
+              className="btn-secondary btn-sm"
+              onClick={() => setShowDetails(false)}
+            >
+              ← Back to List
+            </button>
+          </div>
+
+          {editMessage && (
+            <div className={`alert ${editMessageType === "error" ? "alert-error" : "alert-success"}`}>
+              {editMessage}
+            </div>
+          )}
+
+          {detailsLoading ? (
+            <p className="text-center text-slate-500 py-8">Loading details...</p>
+          ) : accountDetails ? (
+            <div className="space-y-6">
+              {/* Account Summary */}
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">Account Summary</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Email</label>
+                    <p className="text-slate-900 font-mono">{accountDetails.email}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Total Devices</label>
+                    <p className="text-slate-900">{accountDetails.device_count}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Active Devices</label>
+                    <p className="text-slate-900">{accountDetails.active_device_count}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Associated Tokens</label>
+                    <p className="text-slate-900">{accountDetails.tokens?.length || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tokens Section */}
+              {accountDetails.tokens && accountDetails.tokens.length > 0 && (
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Associated Tokens</h3>
+                  <div className="token-grid">
+                    {accountDetails.tokens.map((token) => (
+                      <div
+                        key={token}
+                        className="token-badge"
+                        onClick={() => navigator.clipboard.writeText(token)}
+                        title="Click to copy"
+                      >
+                        {token}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Devices Section */}
+              {accountDetails.devices && accountDetails.devices.length > 0 && (
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Registered Devices</h3>
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="min-w-full border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-slate-100 text-left text-slate-500 uppercase tracking-[0.15em] text-[11px]">
+                          <th className="px-4 py-3">MAC Address</th>
+                          <th className="px-4 py-3">Token</th>
+                          <th className="px-4 py-3">Type</th>
+                          <th className="px-4 py-3">Active</th>
+                          <th className="px-4 py-3">Expires</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {accountDetails.devices.map((device) => (
+                          <tr
+                            key={device.mac_address}
+                            className={isExpired(device.expires_at) ? "inactive-row" : device.active ? "active-row" : "inactive-row"}
+                          >
+                            <td className="px-4 py-4 font-mono text-slate-700">{device.mac_address}</td>
+                            <td className="px-4 py-4 font-mono text-slate-700">{device.token_id || "-"}</td>
+                            <td className="px-4 py-4">
+                              <span className={`badge ${device.is_trial ? "badge-trial" : "badge-paid"}`}>
+                                {device.is_trial ? "Trial" : "Paid"}
+                              </span>
+                              {isExpired(device.expires_at) && (
+                                <span className="badge badge-expired ml-2">Expired</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-4">
+                              <span className={`status ${device.active ? "status-active" : "status-inactive"}`}>
+                                {device.active ? "✓" : "✗"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 text-slate-700">
+                              {formatDate(device.expires_at)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Edit Section */}
+              {!editMode ? (
+                <div className="flex gap-2">
+                  <button className="btn-primary" onClick={startEdit}>
+                    Edit Account
+                  </button>
+                  <button className="btn-danger" onClick={deleteAccount}>
+                    Delete Account
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-4">Edit Account</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="form-label">Email</label>
+                      <input
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Extend Expiration (days)</label>
+                      <input
+                        type="number"
+                        value={editExtenDays}
+                        onChange={(e) => setEditExtenDays(e.target.value)}
+                        placeholder="Optional"
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={editActive}
+                          onChange={(e) => setEditActive(e.target.checked)}
+                        />
+                        <span className="form-label mb-0">Activate all devices</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="btn-success" onClick={saveEdit}>
+                      Save Changes
+                    </button>
+                    <button className="btn-secondary" onClick={cancelEdit}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-center text-slate-500 py-8">Failed to load account details</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

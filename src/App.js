@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Tokens from "./pages/Tokens";
 import Devices from "./pages/Devices";
+import Users from "./pages/Users";
 import Proxy from "./pages/Proxy";
 import Subscriptions from "./pages/Subscriptions";
 import ActivateDevice from "./pages/ActivateDevice";
@@ -25,6 +26,7 @@ function App() {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/tokens" element={<ProtectedRoute><Tokens /></ProtectedRoute>} />
               <Route path="/devices" element={<ProtectedRoute><Devices /></ProtectedRoute>} />
+              <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
               <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
               <Route path="/activate" element={<ProtectedRoute><ActivateDevice /></ProtectedRoute>} />
               <Route path="/heartbeat" element={<ProtectedRoute><Heartbeat /></ProtectedRoute>} />
