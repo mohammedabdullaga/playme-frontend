@@ -428,6 +428,15 @@ export default function Users() {
                         className="form-input"
                       />
                     </div>
+                    <div>
+                      <label className="form-label">Set Expiry (device)</label>
+                      <input
+                        type="datetime-local"
+                        value={editExpiresAt}
+                        onChange={(e) => setEditExpiresAt(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
                     <div className="md:col-span-2">
                       <label className="flex items-center gap-2">
                         <input
