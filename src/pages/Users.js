@@ -199,7 +199,7 @@ export default function Users() {
     return () => {
       active = false;
     };
-  }, [searchQuery, accounts, detailsCache]);
+  }, [effectiveQuery, accounts, detailsCache]);
 
   // Debounce user typing to avoid excessive detail fetches
   useEffect(() => {
