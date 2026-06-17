@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import API from "../api/api";
 
@@ -7,6 +7,8 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [valid, setValid] = useState(true);
   const [open, setOpen] = useState(false);
+  const sidebarRef = useRef(null);
+  const triggerRef = useRef(null);
   const key = localStorage.getItem("admin_key");
 
   useEffect(() => {
@@ -33,6 +35,29 @@ export default function Navbar() {
     };
   }, [key, navigate]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const handleClickOutside = (event) => {
+      const sidebarNode = sidebarRef.current;
+      const triggerNode = triggerRef.current;
+      if (
+        sidebarNode &&
+        !sidebarNode.contains(event.target) &&
+        triggerNode &&
+        !triggerNode.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open]);
+
   if (!key || !valid) return null;
 
   const getLinkClass = ({ isActive }) =>
@@ -45,12 +70,12 @@ export default function Navbar() {
 
   return (
     <>
-      <div className="mobile-nav-trigger">
+      <div className="mobile-nav-trigger" ref={triggerRef}>
         <button className="mobile-menu-button" onClick={() => setOpen((prev) => !prev)}>
           {open ? "Close menu" : "Open menu"}
         </button>
       </div>
-      <aside className={`sidebar sidebar-width ${open ? "mobile-open" : ""}`}>
+      <aside ref={sidebarRef} className={`sidebar sidebar-width ${open ? "mobile-open" : ""}`}>
         <div className="sidebar-brand">
         <div className="brand-icon">P</div>
         <div>
