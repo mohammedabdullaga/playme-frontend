@@ -9,6 +9,7 @@ export default function Users() {
   const [editMode, setEditMode] = useState(false);
   const [editEmail, setEditEmail] = useState("");
   const [editExtenDays, setEditExtenDays] = useState("");
+  const [editExpiresAt, setEditExpiresAt] = useState("");
   const [editActive, setEditActive] = useState(true);
   const [editMessage, setEditMessage] = useState("");
   const [editMessageType, setEditMessageType] = useState("");
@@ -65,6 +66,15 @@ export default function Users() {
   const startEdit = () => {
     setEditEmail(selectedAccount?.email || "");
     setEditExtenDays("");
+    // prefill expiry from first device if available
+    const pref = accountDetails?.devices && accountDetails.devices.length > 0 ? accountDetails.devices[0].expires_at : "";
+    if (pref) {
+      const d = new Date(pref);
+      const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+      setEditExpiresAt(local);
+    } else {
+      setEditExpiresAt("");
+    }
     setEditActive(true);
     setEditMode(true);
     setEditMessage("");
@@ -84,6 +94,11 @@ export default function Users() {
       }
       if (editExtenDays) {
         payload.extend_days = Number(editExtenDays);
+      }
+      if (editExpiresAt) {
+        // editExpiresAt is in local datetime-local format; convert to ISO
+        const iso = new Date(editExpiresAt).toISOString();
+        payload.expires_at = iso;
       }
       payload.active = editActive;
 
