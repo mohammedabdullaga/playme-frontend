@@ -27,6 +27,7 @@ export const adminUpdateMessage = (id, msg) => API.put(`/admin/messages/${id}`, 
 export const adminDeleteMessage = (id) => API.delete(`/admin/messages/${id}`);
 export const adminGetStatus = () => API.get(`/admin/app/status`);
 export const adminSetStatus = (allowed, expiresAt) => API.put(`/admin/app/status`, { allowed, expires_at: expiresAt });
+export const adminGetHeartbeats = () => API.get(`/admin/heartbeats`);
 
 // User/Account management endpoints
 export const adminGetAccounts = () => API.get(`/admin/accounts`);
