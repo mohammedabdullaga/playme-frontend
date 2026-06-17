@@ -16,7 +16,7 @@ export default function Navbar() {
     }
 
     let mounted = true;
-    API.get("/admin/app/status")
+    API.get("/admin/devices")
       .then(() => {
         if (mounted) setValid(true);
       })

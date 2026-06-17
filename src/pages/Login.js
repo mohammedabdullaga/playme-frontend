@@ -1,11 +1,30 @@
 import { useState } from "react";
+import { adminGetDevices } from "../api/api";
 
 export default function Login() {
   const [key, setKey] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const submit = () => {
-    localStorage.setItem("admin_key", key);
-    window.location.href = "/dashboard";
+  const submit = async () => {
+    if (!key.trim()) {
+      setError("Please enter your admin API key.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    localStorage.setItem("admin_key", key.trim());
+
+    try {
+      await adminGetDevices();
+      window.location.href = "/dashboard";
+    } catch (err) {
+      localStorage.removeItem("admin_key");
+      setError("Invalid admin API key or unable to validate. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -26,11 +45,14 @@ export default function Login() {
           />
         </div>
 
+        {error && <div className="alert alert-error">{error}</div>}
+
         <button
           className="w-full rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
           onClick={submit}
+          disabled={loading}
         >
-          Login
+          {loading ? "Validating..." : "Login"}
         </button>
       </div>
     </div>
