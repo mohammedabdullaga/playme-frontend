@@ -14,6 +14,10 @@ export default function Users() {
   const [editMessageType, setEditMessageType] = useState("");
   const [accountDetails, setAccountDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredAccounts, setFilteredAccounts] = useState([]);
+  const [detailsCache, setDetailsCache] = useState({});
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     fetchAccounts();
@@ -23,7 +27,9 @@ export default function Users() {
     try {
       setLoading(true);
       const res = await adminGetAccounts();
-      setAccounts(res.data.accounts || []);
+      const list = res.data.accounts || [];
+      setAccounts(list);
+      setFilteredAccounts(list);
     } catch (error) {
       setEditMessage("Failed to load accounts");
       setEditMessageType("error");
@@ -35,8 +41,14 @@ export default function Users() {
   const openDetails = async (account) => {
     try {
       setDetailsLoading(true);
-      const res = await adminGetAccount(account.email);
-      setAccountDetails(res.data);
+      const cached = detailsCache[account.email];
+      if (cached) {
+        setAccountDetails(cached);
+      } else {
+        const res = await adminGetAccount(account.email);
+        setAccountDetails(res.data);
+        setDetailsCache((c) => ({ ...c, [account.email]: res.data }));
+      }
       setSelectedAccount(account);
       setShowDetails(true);
       setEditMode(false);
@@ -101,6 +113,11 @@ export default function Users() {
       setEditMessageType("success");
       setShowDetails(false);
       setSelectedAccount(null);
+      setDetailsCache((c) => {
+        const copy = { ...c };
+        delete copy[selectedAccount.email];
+        return copy;
+      });
       fetchAccounts();
     } catch (error) {
       setEditMessage(error.response?.data?.detail || "Failed to delete account");
@@ -119,6 +136,70 @@ export default function Users() {
     return new Date(expiresAt) < new Date();
   };
 
+  // Search logic: filter by email first; if none match, fetch account details and search tokens/devices
+  useEffect(() => {
+    let active = true;
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (!q) {
+      setFilteredAccounts(accounts);
+      setSearching(false);
+      return;
+    }
+
+    // quick email match
+    const emailMatches = accounts.filter((a) => (a.email || "").toLowerCase().includes(q));
+    if (emailMatches.length > 0) {
+      setFilteredAccounts(emailMatches);
+      setSearching(false);
+      return;
+    }
+
+    // otherwise search tokens/devices by fetching details (cached when possible)
+    (async () => {
+      setSearching(true);
+      try {
+        const promises = accounts.map(async (a) => {
+          if (detailsCache[a.email]) return { email: a.email, details: detailsCache[a.email] };
+          try {
+            const res = await adminGetAccount(a.email);
+            return { email: a.email, details: res.data };
+          } catch (e) {
+            return { email: a.email, details: null };
+          }
+        });
+
+        const detailed = await Promise.all(promises);
+        if (!active) return;
+
+        const matches = [];
+        const newCache = { ...detailsCache };
+
+        detailed.forEach((item) => {
+          const d = item.details;
+          if (!d) return;
+          newCache[item.email] = d;
+          const tokenMatch = (d.tokens || []).some((t) => (t || "").toLowerCase().includes(q));
+          const deviceMatch = (d.devices || []).some((dv) => (dv.mac_address || "").toLowerCase().includes(q));
+          if (tokenMatch || deviceMatch) {
+            const acct = accounts.find((x) => x.email === item.email);
+            if (acct) matches.push(acct);
+          }
+        });
+
+        setDetailsCache(newCache);
+        setFilteredAccounts(matches);
+      } catch (err) {
+        console.error("Search error", err);
+      } finally {
+        if (active) setSearching(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [searchQuery, accounts, detailsCache]);
+
   return (
     <div className="panel">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -130,40 +211,54 @@ export default function Users() {
         <div>
           {loading ? (
             <p className="text-center text-slate-500 py-8">Loading accounts...</p>
-          ) : accounts.length === 0 ? (
-            <p className="text-center text-slate-500 py-8">No accounts found</p>
           ) : (
-            <div className="mt-6 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 shadow-sm">
-              <table className="min-w-full border-collapse text-sm">
-                <thead>
-                  <tr className="bg-slate-100 text-left text-slate-500 uppercase tracking-[0.15em] text-[11px]">
-                    <th className="px-4 py-3">Email</th>
-                    <th className="px-4 py-3">Devices</th>
-                    <th className="px-4 py-3">Active</th>
-                    <th className="px-4 py-3">Tokens</th>
-                    <th className="px-4 py-3">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.map((account) => (
-                    <tr key={account.email} className={account.active_device_count > 0 ? "active-row" : "inactive-row"}>
-                      <td className="px-4 py-4 font-mono text-slate-700">{account.email}</td>
-                      <td className="px-4 py-4 text-slate-700">{account.device_count}</td>
-                      <td className="px-4 py-4 text-slate-700">{account.active_device_count}</td>
-                      <td className="px-4 py-4 text-slate-700">{account.token_count}</td>
-                      <td className="px-4 py-4">
-                        <button
-                          className="btn-primary btn-sm"
-                          onClick={() => openDetails(account)}
-                        >
-                          View Details
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="mt-6 flex items-center gap-4">
+                <input
+                  placeholder="Search by email, token or MAC"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="form-input"
+                />
+                <div className="text-sm text-slate-500">{searching ? 'Searching...' : `${filteredAccounts.length} results`}</div>
+              </div>
+
+              {filteredAccounts.length === 0 ? (
+                <p className="text-center text-slate-500 py-8">No accounts found</p>
+              ) : (
+                <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 shadow-sm">
+                  <table className="min-w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-slate-100 text-left text-slate-500 uppercase tracking-[0.15em] text-[11px]">
+                        <th className="px-4 py-3">Email</th>
+                        <th className="px-4 py-3">Devices</th>
+                        <th className="px-4 py-3">Active</th>
+                        <th className="px-4 py-3">Tokens</th>
+                        <th className="px-4 py-3">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAccounts.map((account) => (
+                        <tr key={account.email} className={account.active_device_count > 0 ? "active-row" : "inactive-row"}>
+                          <td className="px-4 py-4 font-mono text-slate-700">{account.email}</td>
+                          <td className="px-4 py-4 text-slate-700">{account.device_count}</td>
+                          <td className="px-4 py-4 text-slate-700">{account.active_device_count}</td>
+                          <td className="px-4 py-4 text-slate-700">{account.token_count}</td>
+                          <td className="px-4 py-4">
+                            <button
+                              className="btn-primary btn-sm"
+                              onClick={() => openDetails(account)}
+                            >
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : (
