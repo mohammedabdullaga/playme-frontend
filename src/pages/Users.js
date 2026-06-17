@@ -15,6 +15,7 @@ export default function Users() {
   const [accountDetails, setAccountDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [effectiveQuery, setEffectiveQuery] = useState("");
   const [filteredAccounts, setFilteredAccounts] = useState([]);
   const [detailsCache, setDetailsCache] = useState({});
   const [searching, setSearching] = useState(false);
@@ -139,7 +140,7 @@ export default function Users() {
   // Search logic: filter by email first; if none match, fetch account details and search tokens/devices
   useEffect(() => {
     let active = true;
-    const q = (searchQuery || "").trim().toLowerCase();
+    const q = (effectiveQuery || "").trim().toLowerCase();
     if (!q) {
       setFilteredAccounts(accounts);
       setSearching(false);
@@ -199,6 +200,14 @@ export default function Users() {
       active = false;
     };
   }, [searchQuery, accounts, detailsCache]);
+
+  // Debounce user typing to avoid excessive detail fetches
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setEffectiveQuery(searchQuery);
+    }, 350);
+    return () => clearTimeout(id);
+  }, [searchQuery]);
 
   return (
     <div className="panel">
