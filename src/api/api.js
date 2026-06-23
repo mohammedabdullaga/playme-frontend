@@ -29,7 +29,6 @@ export const adminGetStatus = () => API.get(`/admin/app/status`);
 export const adminSetStatus = (allowed, expiresAt) => API.put(`/admin/app/status`, { allowed, expires_at: expiresAt });
 export const adminGetHeartbeats = () => API.get(`/admin/heartbeats`);
 export const getProxyList = () => API.get(`/app/proxy`);
-export const adminSetProxy = (data) => API.post(`/admin/proxy`, data);
 
 // User/Account management endpoints
 export const adminGetAccounts = () => API.get(`/admin/accounts`);
