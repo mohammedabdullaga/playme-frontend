@@ -76,7 +76,13 @@ export default function Tokens() {
           <input
             type="number"
             value={days}
-            onChange={(e) => setDays(Math.max(1, Number(e.target.value) || 1))}
+            onChange={(e) => {
+              const num = Number(e.target.value);
+              setDays(isNaN(num) ? 0 : num);
+            }}
+            onBlur={() => {
+              setDays(Math.max(1, days));
+            }}
             min="1"
             className="form-input"
           />
@@ -87,7 +93,13 @@ export default function Tokens() {
           <input
             type="number"
             value={count}
-            onChange={(e) => setCount(Math.max(1, Number(e.target.value) || 1))}
+            onChange={(e) => {
+              const num = Number(e.target.value);
+              setCount(isNaN(num) ? 0 : num);
+            }}
+            onBlur={() => {
+              setCount(Math.max(1, count));
+            }}
             min="1"
             className="form-input"
           />
