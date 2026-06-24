@@ -258,6 +258,7 @@ export default function Users() {
                         <th className="px-4 py-3">Devices</th>
                         <th className="px-4 py-3">Active</th>
                         <th className="px-4 py-3">Tokens</th>
+                        <th className="px-4 py-3">Versions</th>
                         <th className="px-4 py-3">Action</th>
                       </tr>
                     </thead>
@@ -268,6 +269,20 @@ export default function Users() {
                           <td className="px-4 py-4 text-slate-700">{account.device_count}</td>
                           <td className="px-4 py-4 text-slate-700">{account.active_device_count}</td>
                           <td className="px-4 py-4 text-slate-700">{account.token_count}</td>
+                          <td className="px-4 py-4 text-slate-700">
+                            <div className="flex gap-1">
+                              {account.v1_token_count > 0 && (
+                                <span className="text-xs px-2 py-1 rounded font-semibold bg-gray-100 text-gray-700">
+                                  V1: {account.v1_token_count}
+                                </span>
+                              )}
+                              {account.v2_token_count > 0 && (
+                                <span className="text-xs px-2 py-1 rounded font-semibold bg-blue-100 text-blue-700">
+                                  V2: {account.v2_token_count}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-4">
                             <button
                               className="btn-primary btn-sm"
@@ -309,7 +324,7 @@ export default function Users() {
               {/* Account Summary */}
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Account Summary</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="text-sm font-medium text-slate-600">Email</label>
                     <p className="text-slate-900 font-mono">{accountDetails.email}</p>
@@ -326,6 +341,18 @@ export default function Users() {
                     <label className="text-sm font-medium text-slate-600">Associated Tokens</label>
                     <p className="text-slate-900">{accountDetails.tokens?.length || 0}</p>
                   </div>
+                  {accountDetails.v1_token_count > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">V1 Tokens (Old App)</label>
+                      <p className="text-slate-900 font-semibold text-gray-700">{accountDetails.v1_token_count}</p>
+                    </div>
+                  )}
+                  {accountDetails.v2_token_count > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">V2 Tokens (New App)</label>
+                      <p className="text-slate-900 font-semibold text-blue-700">{accountDetails.v2_token_count}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -333,17 +360,47 @@ export default function Users() {
               {accountDetails.tokens && accountDetails.tokens.length > 0 && (
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
                   <h3 className="text-lg font-semibold text-slate-900 mb-4">Associated Tokens</h3>
-                  <div className="token-grid">
-                    {accountDetails.tokens.map((token) => (
-                      <div
-                        key={token}
-                        className="token-badge"
-                        onClick={() => navigator.clipboard.writeText(token)}
-                        title="Click to copy"
-                      >
-                        {token}
+                  <div className="space-y-2">
+                    {Array.isArray(accountDetails.tokens) ? (
+                      // Handle both string tokens and token objects
+                      accountDetails.tokens.map((token, idx) => {
+                        const isObject = typeof token === 'object' && token !== null;
+                        const tokenValue = isObject ? token.token : token;
+                        const tokenVersion = isObject ? token.version : null;
+                        return (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-3 p-3 bg-white rounded border border-slate-200 hover:border-slate-300 cursor-pointer"
+                            onClick={() => navigator.clipboard.writeText(tokenValue)}
+                            title="Click to copy"
+                          >
+                            <code className="font-mono text-sm flex-1 text-slate-700">{tokenValue}</code>
+                            {tokenVersion && (
+                              <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                                tokenVersion === 'v2' 
+                                  ? 'bg-blue-100 text-blue-700' 
+                                  : 'bg-gray-100 text-gray-700'
+                              }`}>
+                                {tokenVersion.toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="token-grid">
+                        {accountDetails.tokens.map((token) => (
+                          <div
+                            key={token}
+                            className="token-badge"
+                            onClick={() => navigator.clipboard.writeText(token)}
+                            title="Click to copy"
+                          >
+                            {token}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               )}
@@ -358,6 +415,7 @@ export default function Users() {
                         <tr className="bg-slate-100 text-left text-slate-500 uppercase tracking-[0.15em] text-[11px]">
                           <th className="px-4 py-3">MAC Address</th>
                           <th className="px-4 py-3">Token</th>
+                          <th className="px-4 py-3">Version</th>
                           <th className="px-4 py-3">Type</th>
                           <th className="px-4 py-3">Active</th>
                           <th className="px-4 py-3">Expires</th>
@@ -371,6 +429,17 @@ export default function Users() {
                           >
                             <td className="px-4 py-4 font-mono text-slate-700">{device.mac_address}</td>
                             <td className="px-4 py-4 font-mono text-slate-700">{device.token_id || "-"}</td>
+                            <td className="px-4 py-4">
+                              {device.token_version && (
+                                <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                                  device.token_version === 'v2' 
+                                    ? 'bg-blue-100 text-blue-700' 
+                                    : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {device.token_version.toUpperCase()}
+                                </span>
+                              )}
+                            </td>
                             <td className="px-4 py-4">
                               <span className={`badge ${device.is_trial ? "badge-trial" : "badge-paid"}`}>
                                 {device.is_trial ? "Trial" : "Paid"}

@@ -16,6 +16,8 @@ export default API;
 
 // Admin helper functions
 export const adminCreateTokens = (days, count) => API.post(`/admin/tokens?days=${days}&count=${count}`);
+export const adminCreateTokensV1 = (days, count) => API.post(`/admin/tokens/v1?days=${days}&count=${count}`);
+export const adminCreateTokensV2 = (days, count) => API.post(`/admin/tokens/v2?days=${days}&count=${count}`);
 export const adminGetDevices = () => API.get(`/admin/devices`);
 export const adminDeactivateDevice = (mac) => API.post(`/admin/devices/${mac}/deactivate`);
 export const adminActivateDevice = (mac) => API.post(`/admin/devices/${mac}/activate`);

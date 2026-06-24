@@ -1,18 +1,30 @@
 import { useState } from "react";
-import API from "../api/api";
+import { adminCreateTokensV1, adminCreateTokensV2 } from "../api/api";
 
 export default function Tokens() {
+  const [version, setVersion] = useState("v2");
   const [days, setDays] = useState(30);
   const [count, setCount] = useState(1);
   const [tokens, setTokens] = useState([]);
+  const [tokenVersion, setTokenVersion] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [copiedToken, setCopiedToken] = useState("");
 
   const create = async () => {
-    const res = await API.post(`/admin/tokens?days=${Number(days)}&count=${Number(count)}`);
-    setTokens(res.data.tokens || []);
-    setCopiedToken("");
-    setCopyMessage("");
+    try {
+      let res;
+      if (version === "v1") {
+        res = await adminCreateTokensV1(Number(days), Number(count));
+      } else {
+        res = await adminCreateTokensV2(Number(days), Number(count));
+      }
+      setTokens(res.data.tokens || []);
+      setTokenVersion(res.data.version || "");
+      setCopiedToken("");
+      setCopyMessage("");
+    } catch (error) {
+      setCopyMessage(`Error: ${error.response?.data?.detail || error.message}`);
+    }
   };
 
   const showCopyMessage = (message) => {
@@ -46,7 +58,19 @@ export default function Tokens() {
         </button>
       </div>
 
-      <div className="form-section grid gap-6 md:grid-cols-2">
+      <div className="form-section grid gap-6 md:grid-cols-3">
+        <div>
+          <label className="form-label">Token Version</label>
+          <select
+            value={version}
+            onChange={(e) => setVersion(e.target.value)}
+            className="form-input"
+          >
+            <option value="v1">V1 - Old App</option>
+            <option value="v2">V2 - New App ⭐</option>
+          </select>
+        </div>
+
         <div>
           <label className="form-label">Token Duration (days)</label>
           <input
@@ -74,7 +98,9 @@ export default function Tokens() {
         <section className="token-panel">
           <div className="token-panel-header">
             <div>
-              <h3 className="token-panel-title">Generated Tokens</h3>
+              <h3 className="token-panel-title">
+                Generated Tokens {tokenVersion && <span className="badge badge-success">v{tokenVersion}</span>}
+              </h3>
               <p className="token-panel-subtitle">Click any token to copy it, or copy them all at once.</p>
             </div>
             <button className="button button-primary" onClick={copyAll}>
