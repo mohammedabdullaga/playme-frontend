@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getProxyList, adminSetProxy } from "../api/api";
 
-const emptyProxy = { host: "", port: "", username: "", password: "" };
+const emptyProxy = { name: "", host: "", port: "", username: "", password: "" };
 
 export default function Proxy() {
   const [proxies, setProxies] = useState([]);
@@ -50,6 +50,7 @@ export default function Proxy() {
       setMessage("");
       const payload = {
         proxies: proxies.map((proxy) => ({
+          name: proxy.name || null,
           host: proxy.host,
           port: Number(proxy.port),
           username: proxy.username || null,
@@ -69,7 +70,7 @@ export default function Proxy() {
   };
 
   return (
-    <div className="rounded-3xl bg-white p-8 shadow-xl ring-1 ring-slate-200 max-w-5xl mx-auto">
+    <div className="rounded-3xl bg-white p-8 shadow-xl ring-1 ring-slate-200 max-w-6xl mx-auto">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-slate-900">Proxy Configuration</h2>
@@ -100,7 +101,16 @@ export default function Proxy() {
             <div className="overflow-x-auto rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
               <div className="grid gap-4">
                 {proxies.map((proxy, index) => (
-                  <div key={`${proxy.host}-${index}`} className="grid gap-4 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:grid-cols-5 md:items-end">
+                  <div key={`${proxy.name || proxy.host}-${index}`} className="grid gap-4 rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:grid-cols-6 md:items-end">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700">Name</label>
+                      <input
+                        value={proxy.name || ""}
+                        onChange={(e) => updateProxy(index, "name", e.target.value)}
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                        placeholder="proxy-1"
+                      />
+                    </div>
                     <div>
                       <label className="block text-sm font-semibold text-slate-700">Host</label>
                       <input
