@@ -10,6 +10,7 @@ import ActivateDevice from "./pages/ActivateDevice";
 import Messages from "./pages/Messages";
 import AppStatus from "./pages/AppStatus";
 import Heartbeat from "./pages/Heartbeat";
+import Resellers from "./pages/Resellers";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -33,6 +34,7 @@ function App() {
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/status" element={<ProtectedRoute><AppStatus /></ProtectedRoute>} />
               <Route path="/proxy" element={<ProtectedRoute><Proxy /></ProtectedRoute>} />
+              <Route path="/resellers" element={<ProtectedRoute><Resellers /></ProtectedRoute>} />
             </Routes>
             </div>
           </main>

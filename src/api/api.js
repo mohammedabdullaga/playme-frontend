@@ -31,6 +31,10 @@ export const adminGetStatus = () => API.get(`/admin/app/status`);
 export const adminSetStatus = (allowed, expiresAt) => API.put(`/admin/app/status`, { allowed, expires_at: expiresAt });
 export const adminGetHeartbeats = () => API.get(`/admin/heartbeats`);
 export const getProxyList = () => API.get(`/app/proxy`);
+export const adminGetResellers = () => API.get(`/admin/resellers`);
+export const adminCreateReseller = (data) => API.post(`/admin/resellers`, data);
+export const adminUpdateReseller = (id, data) => API.put(`/admin/resellers/${id}`, data);
+export const adminTopUpReseller = (data) => API.post(`/admin/resellers/top-up`, data);
 
 // User/Account management endpoints
 export const adminGetAccounts = () => API.get(`/admin/accounts`);

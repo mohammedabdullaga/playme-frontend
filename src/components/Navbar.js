@@ -98,6 +98,7 @@ export default function Navbar() {
           <NavLink className={getLinkClass} to="/tokens">Tokens</NavLink>
           <NavLink className={getLinkClass} to="/activate">Activate Device</NavLink>
           <NavLink className={getLinkClass} to="/proxy">Proxy</NavLink>
+          <NavLink className={getLinkClass} to="/resellers">Resellers</NavLink>
         </div>
 
         <div className="nav-section">
