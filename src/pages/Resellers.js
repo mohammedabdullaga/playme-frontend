@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { adminCreateReseller, adminGetResellers, adminTopUpReseller, adminUpdateReseller } from "../api/api";
+import { adminCreateReseller, adminGetResellers, adminTopUpReseller, adminUpdateReseller, adminDeleteReseller } from "../api/api";
 
 export default function Resellers() {
   const [resellers, setResellers] = useState([]);
+  const [selectedReseller, setSelectedReseller] = useState(null);
   const [form, setForm] = useState({ email: "", password: "", points_balance: 0, is_active: true });
   const [message, setMessage] = useState("");
 
@@ -52,16 +53,66 @@ export default function Resellers() {
     }
   };
 
+  const handleEdit = (reseller) => {
+    setSelectedReseller(reseller);
+    setForm({
+      email: reseller.email,
+      password: "",
+      points_balance: reseller.points_balance,
+      is_active: reseller.is_active,
+    });
+  };
+
+  const handleDelete = async (resellerId) => {
+    if (!window.confirm("Delete this reseller?")) return;
+    try {
+      await adminDeleteReseller(resellerId);
+      setMessage("Reseller deleted");
+      await loadResellers();
+    } catch (err) {
+      setMessage(err.response?.data?.detail || "Delete failed");
+    }
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!selectedReseller) return;
+
+    try {
+      await adminUpdateReseller(selectedReseller.id, {
+        email: form.email,
+        password: form.password || undefined,
+        points_balance: Number(form.points_balance),
+        is_active: form.is_active,
+      });
+      setMessage("Reseller updated");
+      setSelectedReseller(null);
+      setForm({ email: "", password: "", points_balance: 0, is_active: true });
+      await loadResellers();
+    } catch (err) {
+      setMessage(err.response?.data?.detail || "Update failed");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setSelectedReseller(null);
+    setForm({ email: "", password: "", points_balance: 0, is_active: true });
+  };
+
   return (
     <div>
       <h2>Resellers</h2>
       {message ? <div style={{ marginBottom: 12 }}>{message}</div> : null}
-      <form onSubmit={handleCreate} style={{ background: "white", padding: 16, borderRadius: 8, marginBottom: 20 }}>
-        <h3>Create reseller</h3>
+      <form onSubmit={selectedReseller ? handleSave : handleCreate} style={{ background: "white", padding: 16, borderRadius: 8, marginBottom: 20 }}>
+        <h3>{selectedReseller ? "Edit reseller" : "Create reseller"}</h3>
         <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" style={inputStyle} />
-        <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Password" style={inputStyle} />
-        <input type="number" value={form.points_balance} onChange={(e) => setForm({ ...form, points_balance: e.target.value })} placeholder="Initial points" style={inputStyle} />
-        <button type="submit">Create</button>
+        <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={selectedReseller ? "New password (leave blank to keep current)" : "Password"} style={inputStyle} />
+        <input type="number" value={form.points_balance} onChange={(e) => setForm({ ...form, points_balance: e.target.value })} placeholder="Points balance" style={inputStyle} />
+        <label style={{ display: "block", marginBottom: 10 }}>
+          <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} /> Active
+        </label>
+        <button type="submit">{selectedReseller ? "Save" : "Create"}</button>
+        {selectedReseller && <button type="button" onClick={handleCancelEdit} style={{ marginLeft: 10 }}>Cancel</button>}
       </form>
 
       <div style={{ background: "white", padding: 16, borderRadius: 8 }}>
@@ -73,8 +124,10 @@ export default function Resellers() {
               <span>Points: {reseller.points_balance} • {reseller.is_active ? "Active" : "Disabled"}</span>
             </div>
             <div>
+              <button onClick={() => handleEdit(reseller)} style={{ marginRight: 8 }}>Edit</button>
               <button onClick={() => handleTopUp(reseller.id)} style={{ marginRight: 8 }}>Top up</button>
-              <button onClick={() => toggleActive(reseller)}>Toggle Active</button>
+              <button onClick={() => toggleActive(reseller)} style={{ marginRight: 8 }}>{reseller.is_active ? "Disable" : "Enable"}</button>
+              <button onClick={() => handleDelete(reseller.id)} style={{ color: "red" }}>Delete</button>
             </div>
           </div>
         ))}

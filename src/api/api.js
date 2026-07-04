@@ -34,6 +34,7 @@ export const getProxyList = () => API.get(`/app/proxy`);
 export const adminGetResellers = () => API.get(`/admin/resellers`);
 export const adminCreateReseller = (data) => API.post(`/admin/resellers`, data);
 export const adminUpdateReseller = (id, data) => API.put(`/admin/resellers/${id}`, data);
+export const adminDeleteReseller = (id) => API.delete(`/admin/resellers/${id}`);
 export const adminTopUpReseller = (data) => API.post(`/admin/resellers/top-up`, data);
 
 // User/Account management endpoints
