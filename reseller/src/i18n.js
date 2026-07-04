@@ -21,6 +21,7 @@ const strings = {
     points: 'نقطة',
     copy: 'نسخ',
     copied: 'تم النسخ',
+    newTokensTitle: 'الرموز الجديدة',
     switchLanguage: 'English',
     statusCreated: count => `تم إنشاء ${count} رمزًا`,
     failedCreate: 'فشل إنشاء الرموز',

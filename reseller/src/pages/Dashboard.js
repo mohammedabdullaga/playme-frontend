@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [duration, setDuration] = useState(30);
   const [count, setCount] = useState(1);
   const [message, setMessage] = useState('');
+  const [newTokens, setNewTokens] = useState([]);
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
@@ -51,9 +52,11 @@ export default function Dashboard() {
     try {
       const res = await API.post('/app/reseller/tokens', { duration_days: Number(duration), count: Number(count) });
       setMessage(strings.statusCreated(res.data.length));
+      setNewTokens(res.data.map(item => item.token));
       await loadData();
     } catch (err) {
       setMessage(err.response?.data?.detail || strings.failedCreate);
+      setNewTokens([]);
     }
   };
 
@@ -91,6 +94,19 @@ export default function Dashboard() {
             </div>
             <button type="submit" style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: 14, borderRadius: 10, cursor: 'pointer' }}>{strings.generate}</button>
             {message ? <p style={{ marginTop: 14, color: '#1d4ed8' }}>{message}</p> : null}
+            {newTokens.length > 0 ? (
+              <div style={{ marginTop: 20, background: '#f8fafc', padding: 16, borderRadius: 12 }}>
+                <h4 style={{ marginTop: 0 }}>{strings.newTokensTitle}</h4>
+                {newTokens.map((token, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 8, padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                    <span style={{ wordBreak: 'break-all' }}>{token}</span>
+                    <button type="button" onClick={() => navigator.clipboard.writeText(token)} style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
+                      {strings.copy}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </form>
 
           <div style={{ background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)' }}>
