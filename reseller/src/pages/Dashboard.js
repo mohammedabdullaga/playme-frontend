@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/api';
 
+const POINT_COSTS = {
+  30: 3,
+  90: 8,
+  180: 15,
+  365: 26,
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [points, setPoints] = useState(Number(localStorage.getItem('reseller_points') || 0));
@@ -41,6 +48,9 @@ export default function Dashboard() {
     }
   };
 
+  const pointCost = POINT_COSTS[duration] || 0;
+  const totalCost = pointCost * Number(count);
+
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', padding: 24 }}>
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
@@ -50,7 +60,7 @@ export default function Dashboard() {
           <form onSubmit={generateTokens} style={{ background: 'white', padding: 20, borderRadius: 12 }}>
             <h3>Create Tokens</h3>
             <label>Duration (days)</label>
-            <select value={duration} onChange={(e) => setDuration(e.target.value)} style={inputStyle}>
+            <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} style={inputStyle}>
               <option value={30}>30 days</option>
               <option value={90}>90 days</option>
               <option value={180}>180 days</option>
@@ -58,6 +68,12 @@ export default function Dashboard() {
             </select>
             <label>Quantity</label>
             <input type="number" min="1" value={count} onChange={(e) => setCount(e.target.value)} style={inputStyle} />
+            <div style={{ marginBottom: 12 }}>
+              <strong>Cost per token:</strong> {pointCost} points
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <strong>Total cost:</strong> {totalCost} points
+            </div>
             <button type="submit" style={{ background: '#2563eb', color: 'white', border: 'none', padding: '10px 14px', borderRadius: 8, cursor: 'pointer' }}>Generate</button>
             {message ? <p style={{ marginTop: 12 }}>{message}</p> : null}
           </form>
