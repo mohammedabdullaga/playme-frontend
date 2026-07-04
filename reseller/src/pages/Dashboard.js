@@ -121,4 +121,3 @@ const labelStyle = { display: 'block', marginBottom: 8, color: '#334155', fontWe
 
 const inputStyle = { width: '100%', padding: '12px 14px', marginBottom: 16, border: '1px solid #cbd5e1', borderRadius: 10, fontSize: 16 };
 
-const inputStyle = { width: '100%', padding: '10px 12px', marginBottom: 12, border: '1px solid #cbd5e1', borderRadius: 8 };
