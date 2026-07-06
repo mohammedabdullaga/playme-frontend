@@ -195,7 +195,10 @@ export default function Users() {
           if (!d) return;
           newCache[item.email] = d;
           const tokenMatch = (d.tokens || []).some((t) => (t || "").toLowerCase().includes(q));
-          const deviceMatch = (d.devices || []).some((dv) => (dv.mac_address || "").toLowerCase().includes(q));
+          const deviceMatch = (d.devices || []).some((dv) => {
+            const haystack = `${dv.mac_address || ""} ${dv.android_device_id || ""}`.toLowerCase();
+            return haystack.includes(q);
+          });
           if (tokenMatch || deviceMatch) {
             const acct = accounts.find((x) => x.email === item.email);
             if (acct) matches.push(acct);
@@ -239,7 +242,7 @@ export default function Users() {
             <>
               <div className="mt-6 flex items-center gap-4">
                 <input
-                  placeholder="Search by email, token or MAC"
+                  placeholder="Search by email, token, MAC or Android ID"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="form-input"
@@ -414,6 +417,7 @@ export default function Users() {
                       <thead>
                         <tr className="bg-slate-100 text-left text-slate-500 uppercase tracking-[0.15em] text-[11px]">
                           <th className="px-4 py-3">MAC Address</th>
+                          <th className="px-4 py-3">Android ID</th>
                           <th className="px-4 py-3">Token</th>
                           <th className="px-4 py-3">Version</th>
                           <th className="px-4 py-3">Type</th>
@@ -428,6 +432,7 @@ export default function Users() {
                             className={isExpired(device.expires_at) ? "inactive-row" : device.active ? "active-row" : "inactive-row"}
                           >
                             <td className="px-4 py-4 font-mono text-slate-700">{device.mac_address}</td>
+                            <td className="px-4 py-4 font-mono text-slate-700">{device.android_device_id || "-"}</td>
                             <td className="px-4 py-4 font-mono text-slate-700">{device.token_id || "-"}</td>
                             <td className="px-4 py-4">
                               {device.token_version && (
