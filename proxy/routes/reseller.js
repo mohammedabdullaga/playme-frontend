@@ -67,11 +67,12 @@ router.post('/users', async (req, res, next) => {
     }
 
     const reseller = db.prepare('SELECT id, points_balance FROM admins WHERE id = ?').get(resellerId);
-    if (!reseller) {
+    const resellerPoints = Number((reseller && reseller.points_balance) ?? req.user?.points_balance ?? 0);
+    if (!reseller && !req.user) {
       return res.status(404).json({ error: 'Reseller not found' });
     }
 
-    if ((reseller.points_balance || 0) < planCost) {
+    if (resellerPoints < planCost) {
       return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
     }
 
@@ -94,10 +95,12 @@ router.post('/users', async (req, res, next) => {
     db.exec('BEGIN');
 
     try {
-      const balanceUpdate = db.prepare('UPDATE admins SET points_balance = points_balance - ? WHERE id = ? AND points_balance >= ?').run(planCost, resellerId, planCost);
-      if (!balanceUpdate.changes) {
-        db.exec('ROLLBACK');
-        return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
+      if (reseller) {
+        const balanceUpdate = db.prepare('UPDATE admins SET points_balance = points_balance - ? WHERE id = ? AND points_balance >= ?').run(planCost, resellerId, planCost);
+        if (!balanceUpdate.changes) {
+          db.exec('ROLLBACK');
+          return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
+        }
       }
 
       let subdomain = generateSubdomain();

@@ -6,28 +6,15 @@ const { jwtSecret } = require('../services/config');
 
 const router = express.Router();
 
-function getOrCreateReseller(req, resellerId) {
+function getResellerIdentity(req, resellerId) {
   const normalizedId = Number(resellerId);
   const pointsBalance = Number(req.query.points_balance || req.headers['x-reseller-points'] || 0);
-  const username = `reseller-${normalizedId}`;
-
-  const existing = db.prepare('SELECT id, username, role, points_balance FROM admins WHERE username = ?').get(username);
-  if (existing) {
-    if (Number.isFinite(pointsBalance) && pointsBalance >= 0) {
-      db.prepare('UPDATE admins SET points_balance = ? WHERE id = ?').run(pointsBalance, existing.id);
-    }
-    return existing;
-  }
-
-  const passwordHash = bcrypt.hashSync(String(normalizedId), 10);
-  const result = db.prepare('INSERT INTO admins (username, password_hash, role, points_balance) VALUES (?, ?, ?, ?)').run(
-    username,
-    passwordHash,
-    'reseller',
-    Number.isFinite(pointsBalance) && pointsBalance >= 0 ? pointsBalance : 0
-  );
-
-  return db.prepare('SELECT id, username, role, points_balance FROM admins WHERE id = ?').get(result.lastInsertRowid);
+  return {
+    id: Number.isFinite(normalizedId) ? normalizedId : 0,
+    username: `reseller-${normalizedId}`,
+    role: 'reseller',
+    points_balance: Number.isFinite(pointsBalance) && pointsBalance >= 0 ? pointsBalance : 0,
+  };
 }
 
 function authenticateToken(req, res, next) {
@@ -46,8 +33,8 @@ function authenticateToken(req, res, next) {
 
   const resellerId = req.query.reseller_id || req.headers['x-reseller-id'];
   if (resellerId) {
-    const reseller = getOrCreateReseller(req, resellerId);
-    req.user = { id: reseller.id, username: reseller.username, role: reseller.role };
+    const reseller = getResellerIdentity(req, resellerId);
+    req.user = reseller;
     return next();
   }
 
