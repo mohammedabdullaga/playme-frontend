@@ -14,8 +14,7 @@ function buildResellerConfig(user, proxy) {
   const server = `${user.subdomain}.${baseDomain}`;
   const encodedUsername = encodeURIComponent(proxy.username);
   const encodedPassword = encodeURIComponent(proxy.password);
-  const plainUrl = `${proxy.protocol}://${encodedUsername}:${encodedPassword}@${server}:${proxy.port}`;
-  const base64Payload = Buffer.from(plainUrl, 'utf8').toString('base64');
+  const appletvUrl = `socks://${encodedUsername}:${encodedPassword}@${server}:${proxy.port}`;
 
   return {
     whatsapp: user.whatsapp,
@@ -23,7 +22,7 @@ function buildResellerConfig(user, proxy) {
     expires_at: user.expires_at,
     status: user.status,
     config: {
-      appletv_base64: `${proxy.protocol}://${base64Payload}`,
+      appletv_base64: appletvUrl,
       iphone_plain: {
         protocol: proxy.protocol,
         server,

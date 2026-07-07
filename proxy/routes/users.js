@@ -12,9 +12,7 @@ async function buildConfig(user, proxy) {
   const server = `${user.subdomain}.${baseDomain}`;
   const encodedUsername = encodeURIComponent(proxy.username);
   const encodedPassword = encodeURIComponent(proxy.password);
-  const plainUrl = `${proxy.protocol}://${encodedUsername}:${encodedPassword}@${server}:${proxy.port}`;
-  const base64Payload = Buffer.from(plainUrl, 'utf8').toString('base64');
-  const appletvBase64 = `${proxy.protocol}://${base64Payload}`;
+  const appletvBase64 = `socks://${encodedUsername}:${encodedPassword}@${server}:${proxy.port}`;
 
   return {
     user,
