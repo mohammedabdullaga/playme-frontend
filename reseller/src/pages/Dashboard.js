@@ -90,6 +90,14 @@ export default function Dashboard() {
     saveLang(nextLang);
   };
 
+  const handleSignOut = () => {
+    localStorage.removeItem('reseller_id');
+    localStorage.removeItem('reseller_email');
+    localStorage.removeItem('reseller_points');
+    localStorage.removeItem('reseller_proxy_token');
+    navigate('/');
+  };
+
   const loadData = async () => {
     try {
       const me = await API.get('/app/reseller/me');
@@ -243,9 +251,14 @@ export default function Dashboard() {
             <h1 style={{ margin: 0 }}>{strings.panelTitle}</h1>
             <p style={{ margin: '8px 0 0', color: '#475569' }}>{strings.pointsBalance}: <strong>{points}</strong></p>
           </div>
-          <button onClick={toggleLanguage} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: 'white', cursor: 'pointer' }}>
-            {strings.switchLanguage}
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={toggleLanguage} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: 'white', cursor: 'pointer' }}>
+              {strings.switchLanguage}
+            </button>
+            <button onClick={handleSignOut} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer' }}>
+              {strings.signOut}
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20 }}>

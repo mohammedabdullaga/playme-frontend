@@ -45,6 +45,14 @@ export default function Info() {
     saveLang(nextLang);
   };
 
+  const handleSignOut = () => {
+    localStorage.removeItem('reseller_id');
+    localStorage.removeItem('reseller_email');
+    localStorage.removeItem('reseller_points');
+    localStorage.removeItem('reseller_proxy_token');
+    navigate('/');
+  };
+
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', padding: 16, direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
@@ -53,9 +61,14 @@ export default function Info() {
             <Link to="/dashboard" style={navLinkStyle}>{strings.navDashboard}</Link>
             <Link to="/info" style={activeNavLinkStyle}>{strings.navInfo}</Link>
           </div>
-          <button onClick={toggleLanguage} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: 'white', cursor: 'pointer' }}>
-            {strings.switchLanguage}
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={toggleLanguage} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: 'white', cursor: 'pointer' }}>
+              {strings.switchLanguage}
+            </button>
+            <button onClick={handleSignOut} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer' }}>
+              {strings.signOut}
+            </button>
+          </div>
         </div>
 
         <div style={cardStyle}>
