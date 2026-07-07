@@ -12,9 +12,7 @@ const MIRROR_RESELLER_PASSWORD_HASH = '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi9wLw0A8J4V
 
 function buildResellerConfig(user, proxy) {
   const server = `${user.subdomain}.${baseDomain}`;
-  const encodedUsername = encodeURIComponent(proxy.username);
-  const encodedPassword = encodeURIComponent(proxy.password);
-  const appletvUrl = `socks://${encodedUsername}:${encodedPassword}@${server}:${proxy.port}`;
+  const appletvUrl = `socks://${proxy.username}:${proxy.password}@${server}:${proxy.port}`;
 
   return {
     whatsapp: user.whatsapp,

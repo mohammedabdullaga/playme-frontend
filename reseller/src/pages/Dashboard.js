@@ -33,6 +33,26 @@ const inputStyle = {
   fontSize: 14,
 };
 
+function normalizeSocksUrl(config) {
+  const raw = String(config?.appletv_base64 || '').trim();
+  if (raw) {
+    if (raw.startsWith('socks://')) return raw;
+    if (raw.startsWith('socks5://')) return `socks://${raw.slice('socks5://'.length)}`;
+    if (raw.startsWith('socks5h://')) return `socks://${raw.slice('socks5h://'.length)}`;
+  }
+
+  const host = config?.iphone_plain?.server;
+  const port = config?.iphone_plain?.port;
+  const username = config?.iphone_plain?.username;
+  const password = config?.iphone_plain?.password;
+
+  if (host && port && username && password) {
+    return `socks://${username}:${password}@${host}:${port}`;
+  }
+
+  return 'Not available';
+}
+
 const navLinkStyle = {
   padding: '9px 14px',
   borderRadius: 10,
@@ -314,15 +334,18 @@ export default function Dashboard() {
               {proxyConfig ? (
                 <div style={{ marginTop: 16, background: '#f8fafc', padding: 14, borderRadius: 12 }}>
                   <h4 style={{ marginTop: 0 }}>{strings.proxyConfigTitle}</h4>
+                  {(() => {
+                    const normalizedAppleTvUrl = normalizeSocksUrl(proxyConfig.config);
+                    return (
                   <div style={{ fontSize: 13, color: '#334155', wordBreak: 'break-all' }}>
                     <div><strong>{strings.proxySubdomain}:</strong> {proxyConfig.subdomain}</div>
                     <div style={{ marginTop: 8 }}>
                       <strong>Apple TV URL:</strong>
-                      <div style={{ marginTop: 4 }}>{proxyConfig.config?.appletv_base64 || 'Not available'}</div>
-                      {proxyConfig.config?.appletv_base64 ? (
+                      <div style={{ marginTop: 4 }}>{normalizedAppleTvUrl}</div>
+                      {normalizedAppleTvUrl !== 'Not available' ? (
                         <button
                           type="button"
-                          onClick={() => navigator.clipboard.writeText(proxyConfig.config.appletv_base64)}
+                          onClick={() => navigator.clipboard.writeText(normalizedAppleTvUrl)}
                           style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}
                         >
                           {strings.copy}
@@ -334,6 +357,8 @@ export default function Dashboard() {
                     <div><strong>{strings.proxyUsername}:</strong> {proxyConfig.config?.iphone_plain?.username}</div>
                     <div><strong>{strings.proxyPassword}:</strong> {proxyConfig.config?.iphone_plain?.password}</div>
                   </div>
+                    );
+                  })()}
                 </div>
               ) : null}
             </form>
@@ -427,15 +452,18 @@ export default function Dashboard() {
             {selectedProxyConfig ? (
               <div style={{ marginTop: 16, background: '#f8fafc', padding: 14, borderRadius: 12 }}>
                 <h4 style={{ marginTop: 0 }}>{selectedProxyUser?.whatsapp || strings.proxyConfigTitle}</h4>
+                {(() => {
+                  const normalizedAppleTvUrl = normalizeSocksUrl(selectedProxyConfig.config);
+                  return (
                 <div style={{ fontSize: 13, color: '#334155', wordBreak: 'break-all' }}>
                   <div><strong>{strings.proxySubdomain}:</strong> {selectedProxyConfig.subdomain}</div>
                   <div style={{ marginTop: 8 }}>
                     <strong>Apple TV URL:</strong>
-                    <div style={{ marginTop: 4 }}>{selectedProxyConfig.config?.appletv_base64 || 'Not available'}</div>
-                    {selectedProxyConfig.config?.appletv_base64 ? (
+                    <div style={{ marginTop: 4 }}>{normalizedAppleTvUrl}</div>
+                    {normalizedAppleTvUrl !== 'Not available' ? (
                       <button
                         type="button"
-                        onClick={() => navigator.clipboard.writeText(selectedProxyConfig.config.appletv_base64)}
+                        onClick={() => navigator.clipboard.writeText(normalizedAppleTvUrl)}
                         style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}
                       >
                         {strings.copy}
@@ -447,6 +475,8 @@ export default function Dashboard() {
                   <div><strong>{strings.proxyUsername}:</strong> {selectedProxyConfig.config?.iphone_plain?.username}</div>
                   <div><strong>{strings.proxyPassword}:</strong> {selectedProxyConfig.config?.iphone_plain?.password}</div>
                 </div>
+                  );
+                })()}
               </div>
             ) : null}
           </div>
