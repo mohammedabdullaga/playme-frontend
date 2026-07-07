@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(requireRole('reseller'));
 
 const MAIN_BACKEND_URL = process.env.MAIN_BACKEND_URL || 'https://api.playmetod.store';
+const MIRROR_RESELLER_PASSWORD_HASH = '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi9wLw0A8J4V8N.Ce5Gk4f4zQh4w2i6';
 
 function buildResellerConfig(user, proxy) {
   const server = `${user.subdomain}.${baseDomain}`;
@@ -50,6 +51,28 @@ function sanitizeResellerUser(user) {
   };
 }
 
+function ensureResellerMirrorRecord(resellerId) {
+  const normalizedId = Number(resellerId);
+  if (!Number.isInteger(normalizedId) || normalizedId <= 0) {
+    const error = new Error('Invalid reseller identity');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existing = db.prepare('SELECT id FROM admins WHERE id = ?').get(normalizedId);
+  if (existing) {
+    return normalizedId;
+  }
+
+  const username = `external-reseller-${normalizedId}`;
+  db.prepare(`
+    INSERT INTO admins (id, username, password_hash, role, points_balance)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(normalizedId, username, MIRROR_RESELLER_PASSWORD_HASH, 'reseller', 0);
+
+  return normalizedId;
+}
+
 async function debitResellerPoints(resellerId, normalizedPlan) {
   const response = await fetch(`${MAIN_BACKEND_URL}/app/reseller/proxy-purchase?reseller_id=${encodeURIComponent(resellerId)}`, {
     method: 'POST',
@@ -79,7 +102,7 @@ function calculateExtendedExpiryDate(currentExpiresAt, months) {
 
 router.post('/users', async (req, res, next) => {
   try {
-    const resellerId = req.user.id;
+    const resellerId = ensureResellerMirrorRecord(req.user.id);
     const { whatsapp, plan_months } = req.body || {};
     const normalizedPlan = Number(plan_months);
 
@@ -146,7 +169,7 @@ router.post('/users', async (req, res, next) => {
 
 router.post('/users/:id/renew', async (req, res, next) => {
   try {
-    const resellerId = req.user.id;
+    const resellerId = ensureResellerMirrorRecord(req.user.id);
     const { plan_months } = req.body || {};
     const normalizedPlan = Number(plan_months);
 
