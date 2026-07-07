@@ -12,16 +12,10 @@ const MIRROR_RESELLER_PASSWORD_HASH = '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi9wLw0A8J4V
 
 function buildResellerConfig(user, proxy) {
   const server = `${user.subdomain}.${baseDomain}`;
-  const payload = {
-    protocol: proxy.protocol,
-    server,
-    port: proxy.port,
-    username: proxy.username,
-    password: proxy.password,
-  };
-
-  const payloadJson = JSON.stringify(payload);
-  const base64Payload = Buffer.from(payloadJson, 'utf8').toString('base64');
+  const encodedUsername = encodeURIComponent(proxy.username);
+  const encodedPassword = encodeURIComponent(proxy.password);
+  const plainUrl = `${proxy.protocol}://${encodedUsername}:${encodedPassword}@${server}:${proxy.port}`;
+  const base64Payload = Buffer.from(plainUrl, 'utf8').toString('base64');
 
   return {
     whatsapp: user.whatsapp,
@@ -29,7 +23,7 @@ function buildResellerConfig(user, proxy) {
     expires_at: user.expires_at,
     status: user.status,
     config: {
-      appletv_base64: `socks://${base64Payload}`,
+      appletv_base64: `${proxy.protocol}://${base64Payload}`,
       iphone_plain: {
         protocol: proxy.protocol,
         server,

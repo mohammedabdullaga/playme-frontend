@@ -10,17 +10,11 @@ router.use(requireRole('admin'));
 
 async function buildConfig(user, proxy) {
   const server = `${user.subdomain}.${baseDomain}`;
-  const payload = {
-    protocol: proxy.protocol,
-    server,
-    port: proxy.port,
-    username: proxy.username,
-    password: proxy.password,
-  };
-
-  const payloadJson = JSON.stringify(payload);
-  const base64Payload = Buffer.from(payloadJson, 'utf8').toString('base64');
-  const appletvBase64 = `socks://${base64Payload}`;
+  const encodedUsername = encodeURIComponent(proxy.username);
+  const encodedPassword = encodeURIComponent(proxy.password);
+  const plainUrl = `${proxy.protocol}://${encodedUsername}:${encodedPassword}@${server}:${proxy.port}`;
+  const base64Payload = Buffer.from(plainUrl, 'utf8').toString('base64');
+  const appletvBase64 = `${proxy.protocol}://${base64Payload}`;
 
   return {
     user,
