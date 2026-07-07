@@ -17,6 +17,22 @@ const PROXY_PLAN_COSTS = {
   12: 38,
 };
 
+const labelStyle = {
+  display: 'block',
+  marginBottom: 6,
+  fontWeight: 600,
+  color: '#334155',
+};
+
+const inputStyle = {
+  width: '100%',
+  padding: '12px 14px',
+  borderRadius: 10,
+  border: '1px solid #cbd5e1',
+  marginBottom: 14,
+  fontSize: 14,
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [lang, setLang] = useState(getSavedLang());
@@ -34,6 +50,11 @@ export default function Dashboard() {
   const [proxyLogs, setProxyLogs] = useState([]);
   const [proxyLoading, setProxyLoading] = useState(false);
   const [proxyLogsLoading, setProxyLogsLoading] = useState(false);
+  const [proxyUserSearch, setProxyUserSearch] = useState('');
+  const [selectedProxyUser, setSelectedProxyUser] = useState(null);
+  const [selectedProxyConfig, setSelectedProxyConfig] = useState(null);
+  const [selectedProxyError, setSelectedProxyError] = useState('');
+  const [selectedProxyLoading, setSelectedProxyLoading] = useState(false);
 
   useEffect(() => {
     const resellerId = localStorage.getItem('reseller_id');
@@ -63,10 +84,10 @@ export default function Dashboard() {
     }
   };
 
-  const loadProxyUsers = async () => {
+  const loadProxyUsers = async (search = '') => {
     try {
       setProxyLoading(true);
-      const res = await ProxyAPI.get('/api/reseller/users');
+      const res = await ProxyAPI.get('/api/reseller/users', { params: { search } });
       setProxyUsers(res.data || []);
     } catch (err) {
       console.error(err);
@@ -117,6 +138,27 @@ export default function Dashboard() {
     } catch (err) {
       setProxyConfig(null);
       setProxyMessage(err.response?.data?.error || strings.proxyCreateFailed);
+    }
+  };
+
+  const handleSearchProxyUsers = async (e) => {
+    e.preventDefault();
+    await loadProxyUsers(proxyUserSearch);
+  };
+
+  const handleViewProxyDetails = async (user) => {
+    setSelectedProxyUser(user);
+    setSelectedProxyError('');
+    setSelectedProxyConfig(null);
+    setSelectedProxyLoading(true);
+
+    try {
+      const res = await ProxyAPI.get(`/api/reseller/users/${user.id}/config`);
+      setSelectedProxyConfig(res.data || null);
+    } catch (err) {
+      setSelectedProxyError(err.response?.data?.error || strings.proxyCreateFailed);
+    } finally {
+      setSelectedProxyLoading(false);
     }
   };
 
@@ -223,20 +265,51 @@ export default function Dashboard() {
           </div>
 
           <div style={{ background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)' }}>
-            <h3 style={{ marginTop: 0 }}>{strings.proxyUsersTitle}</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0 }}>{strings.proxyUsersTitle}</h3>
+              <form onSubmit={handleSearchProxyUsers} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  value={proxyUserSearch}
+                  onChange={(e) => setProxyUserSearch(e.target.value)}
+                  placeholder={strings.proxySearchPlaceholder}
+                  style={{ minWidth: 220, padding: '10px 12px', borderRadius: 10, border: '1px solid #cbd5e1' }}
+                />
+                <button type="submit" style={{ padding: '10px 14px', borderRadius: 10, border: 'none', background: '#2563eb', color: 'white', cursor: 'pointer' }}>{strings.search}</button>
+              </form>
+            </div>
             {proxyLoading ? <p>{strings.loading}</p> : (
               <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
                 {proxyUsers.length === 0 ? (
                   <p>{strings.noProxyUsers}</p>
                 ) : proxyUsers.map((user) => (
                   <div key={user.id} style={{ borderRadius: 14, border: '1px solid #e2e8f0', padding: 14 }}>
-                    <div style={{ fontWeight: 600 }}>{user.whatsapp}</div>
-                    <div style={{ color: '#475569', marginTop: 6 }}>{user.subdomain}</div>
-                    <div style={{ color: '#64748b', marginTop: 6 }}>{user.status} • {user.expires_at}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{user.whatsapp}</div>
+                        <div style={{ color: '#475569', marginTop: 6 }}>{user.subdomain}</div>
+                        <div style={{ color: '#64748b', marginTop: 6 }}>{user.status} • {user.expires_at}</div>
+                      </div>
+                      <button type="button" onClick={() => handleViewProxyDetails(user)} style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}>{strings.viewDetails}</button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
+            {selectedProxyLoading ? <p style={{ marginTop: 12 }}>{strings.loading}</p> : null}
+            {selectedProxyError ? <p style={{ marginTop: 12, color: '#b91c1c' }}>{selectedProxyError}</p> : null}
+            {selectedProxyConfig ? (
+              <div style={{ marginTop: 16, background: '#f8fafc', padding: 14, borderRadius: 12 }}>
+                <h4 style={{ marginTop: 0 }}>{selectedProxyUser?.whatsapp || strings.proxyConfigTitle}</h4>
+                <div style={{ fontSize: 13, color: '#334155', wordBreak: 'break-all' }}>
+                  <div><strong>{strings.proxySubdomain}:</strong> {selectedProxyConfig.subdomain}</div>
+                  <div><strong>{strings.proxyServer}:</strong> {selectedProxyConfig.config?.iphone_plain?.server}</div>
+                  <div><strong>{strings.proxyPort}:</strong> {selectedProxyConfig.config?.iphone_plain?.port}</div>
+                  <div><strong>{strings.proxyUsername}:</strong> {selectedProxyConfig.config?.iphone_plain?.username}</div>
+                  <div><strong>{strings.proxyPassword}:</strong> {selectedProxyConfig.config?.iphone_plain?.password}</div>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div style={{ background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)' }}>
@@ -260,8 +333,4 @@ export default function Dashboard() {
     </div>
   );
 }
-
-const labelStyle = { display: 'block', marginBottom: 8, color: '#334155', fontWeight: 600 };
-
-const inputStyle = { width: '100%', padding: '12px 14px', marginBottom: 16, border: '1px solid #cbd5e1', borderRadius: 10, fontSize: 16 };
 
