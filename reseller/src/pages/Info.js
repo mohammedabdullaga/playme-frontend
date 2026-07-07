@@ -72,7 +72,7 @@ export default function Info() {
             </div>
 
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
-              <div style={{ fontWeight: 700, marginBottom: 6 }}>Remote Activation Link</div>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Remote Activation Link (for Apple TV)</div>
               <a href="https://tv.happ.su" target="_blank" rel="noreferrer" style={{ color: '#0f766e', wordBreak: 'break-all' }}>
                 tv.happ.su
               </a>
@@ -80,7 +80,7 @@ export default function Info() {
 
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
               <div style={{ fontWeight: 700, marginBottom: 6 }}>Android Playme App Downloader Code</div>
-              <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 1, color: '#0f172a' }}>862586</div>
+              <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: 1, color: '#0f172a' }}>8282070</div>
             </div>
 
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14 }}>
