@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import API, { ProxyAPI } from '../api/api';
+import API from '../api/api';
 import { getSavedLang, getStrings } from '../i18n';
 
 export default function Login() {
@@ -16,11 +16,10 @@ export default function Login() {
     setError('');
     try {
       const resellerRes = await API.post('/app/reseller/login', { email, password });
-      const proxyAuthRes = await ProxyAPI.post('/api/auth/login', { email, password });
       localStorage.setItem('reseller_id', resellerRes.data.reseller_id);
       localStorage.setItem('reseller_email', resellerRes.data.email);
       localStorage.setItem('reseller_points', resellerRes.data.points_balance);
-      localStorage.setItem('reseller_proxy_token', proxyAuthRes.data.token || '');
+      localStorage.setItem('reseller_proxy_token', '');
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || err.response?.data?.error || 'Login failed');
