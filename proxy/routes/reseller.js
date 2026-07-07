@@ -71,12 +71,8 @@ router.post('/users', async (req, res, next) => {
       return res.status(404).json({ error: 'Reseller not found' });
     }
 
-    const incomingPoints = Number(req.user?.points_balance);
-    const effectiveBalance = Number.isFinite(incomingPoints) && incomingPoints >= 0
-      ? incomingPoints
-      : Number(reseller?.points_balance ?? 0);
-
-    if (effectiveBalance < planCost) {
+    const currentBalance = Number(reseller?.points_balance ?? 0);
+    if (currentBalance < planCost) {
       return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
     }
 
@@ -96,16 +92,20 @@ router.post('/users', async (req, res, next) => {
 
     const expiresAt = calculateExpiryDate(normalizedPlan);
 
-    db.exec('BEGIN');
+    db.exec('BEGIN IMMEDIATE');
 
     try {
-      if (reseller) {
-        const nextBalance = effectiveBalance - planCost;
-        const balanceUpdate = db.prepare('UPDATE admins SET points_balance = ? WHERE id = ?').run(nextBalance, resellerId);
-        if (!balanceUpdate.changes) {
-          db.exec('ROLLBACK');
-          return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
-        }
+      const freshReseller = db.prepare('SELECT id, points_balance FROM admins WHERE id = ?').get(resellerId);
+      const freshBalance = Number(freshReseller?.points_balance ?? 0);
+      if (freshBalance < planCost) {
+        db.exec('ROLLBACK');
+        return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
+      }
+
+      const balanceUpdate = db.prepare('UPDATE admins SET points_balance = points_balance - ? WHERE id = ? AND points_balance >= ?').run(planCost, resellerId, planCost);
+      if (!balanceUpdate.changes) {
+        db.exec('ROLLBACK');
+        return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
       }
 
       let subdomain = generateSubdomain();

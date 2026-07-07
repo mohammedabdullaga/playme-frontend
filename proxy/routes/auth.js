@@ -8,12 +8,10 @@ const router = express.Router();
 
 function getResellerIdentity(req, resellerId) {
   const normalizedId = Number(resellerId);
-  const pointsBalance = Number(req.query.points_balance || req.headers['x-reseller-points'] || 0);
   return {
     id: Number.isFinite(normalizedId) ? normalizedId : 0,
     username: `reseller-${normalizedId}`,
     role: 'reseller',
-    points_balance: Number.isFinite(pointsBalance) && pointsBalance >= 0 ? pointsBalance : 0,
   };
 }
 

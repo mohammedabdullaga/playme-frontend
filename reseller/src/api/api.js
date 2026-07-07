@@ -13,9 +13,6 @@ function createApiClient(baseURL) {
     if (resellerId) {
       config.params = { ...config.params, reseller_id: resellerId };
     }
-    if (resellerPoints) {
-      config.params = { ...config.params, points_balance: resellerPoints };
-    }
     if (authToken && !config.headers?.Authorization) {
       config.headers = { ...config.headers, Authorization: `Bearer ${authToken}` };
     }
