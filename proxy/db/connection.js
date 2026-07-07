@@ -12,6 +12,12 @@ function initializeDatabase() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   db.exec(schema);
 
+  const adminColumns = db.prepare('PRAGMA table_info(admins)').all();
+  const hasPointsBalance = adminColumns.some((column) => column.name === 'points_balance');
+  if (!hasPointsBalance) {
+    db.exec('ALTER TABLE admins ADD COLUMN points_balance INTEGER NOT NULL DEFAULT 0');
+  }
+
   const existingAdmin = db.prepare('SELECT * FROM admins WHERE username = ?').get(adminUser);
   if (!existingAdmin) {
     const passwordHash = bcrypt.hashSync(adminPass, 10);

@@ -7,6 +7,13 @@ const { requireRole } = require('./auth');
 const router = express.Router();
 router.use(requireRole('reseller'));
 
+const PROXY_PLAN_COSTS = {
+  1: 5,
+  3: 13,
+  6: 24,
+  12: 38,
+};
+
 function buildResellerConfig(user, proxy) {
   const server = `${user.subdomain}.${baseDomain}`;
   const payload = {
@@ -51,9 +58,21 @@ function sanitizeResellerUser(user) {
 router.post('/users', async (req, res, next) => {
   try {
     const resellerId = req.user.id;
-    const { whatsapp, expires_at } = req.body || {};
-    if (!whatsapp || !expires_at) {
-      return res.status(400).json({ error: 'whatsapp and expires_at are required' });
+    const { whatsapp, plan_months } = req.body || {};
+    const normalizedPlan = Number(plan_months);
+    const planCost = PROXY_PLAN_COSTS[normalizedPlan];
+
+    if (!whatsapp || !Number.isInteger(normalizedPlan) || !planCost) {
+      return res.status(400).json({ error: 'whatsapp and a valid plan_months are required' });
+    }
+
+    const reseller = db.prepare('SELECT id, points_balance FROM admins WHERE id = ?').get(resellerId);
+    if (!reseller) {
+      return res.status(404).json({ error: 'Reseller not found' });
+    }
+
+    if ((reseller.points_balance || 0) < planCost) {
+      return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
     }
 
     const proxy = db.prepare(`
@@ -70,28 +89,51 @@ router.post('/users', async (req, res, next) => {
       return res.status(409).json({ error: 'No available proxy slot' });
     }
 
-    let subdomain = generateSubdomain();
-    let attempts = 0;
-    while (db.prepare('SELECT id FROM users WHERE subdomain = ?').get(subdomain) && attempts < 20) {
-      subdomain = generateSubdomain();
-      attempts += 1;
+    const expiresAt = calculateExpiryDate(normalizedPlan);
+
+    db.exec('BEGIN');
+
+    try {
+      const balanceUpdate = db.prepare('UPDATE admins SET points_balance = points_balance - ? WHERE id = ? AND points_balance >= ?').run(planCost, resellerId, planCost);
+      if (!balanceUpdate.changes) {
+        db.exec('ROLLBACK');
+        return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
+      }
+
+      let subdomain = generateSubdomain();
+      let attempts = 0;
+      while (db.prepare('SELECT id FROM users WHERE subdomain = ?').get(subdomain) && attempts < 20) {
+        subdomain = generateSubdomain();
+        attempts += 1;
+      }
+
+      const recordId = await createRecord(subdomain, proxy.ip);
+      const result = db.prepare(`
+        INSERT INTO users (proxy_id, reseller_id, whatsapp, subdomain, cf_record_id, expires_at, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(proxy.id, resellerId, whatsapp, subdomain, recordId, expiresAt, 'active');
+
+      const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+      db.prepare('INSERT INTO audit_logs (reseller_id, user_id, proxy_id, action) VALUES (?, ?, ?, ?)').run(resellerId, user.id, proxy.id, 'create');
+
+      db.exec('COMMIT');
+
+      const responsePayload = buildResellerConfig(user, proxy);
+      return res.status(201).json(responsePayload);
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
     }
-
-    const recordId = await createRecord(subdomain, proxy.ip);
-    const result = db.prepare(`
-      INSERT INTO users (proxy_id, reseller_id, whatsapp, subdomain, cf_record_id, expires_at, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(proxy.id, resellerId, whatsapp, subdomain, recordId, expires_at, 'active');
-
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
-    db.prepare('INSERT INTO audit_logs (reseller_id, user_id, proxy_id, action) VALUES (?, ?, ?, ?)').run(resellerId, user.id, proxy.id, 'create');
-
-    const responsePayload = buildResellerConfig(user, proxy);
-    return res.status(201).json(responsePayload);
   } catch (error) {
     next(error);
   }
 });
+
+function calculateExpiryDate(months) {
+  const date = new Date();
+  date.setMonth(date.getMonth() + months);
+  return date.toISOString().slice(0, 19);
+}
 
 router.get('/users', (req, res, next) => {
   try {

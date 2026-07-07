@@ -10,6 +10,13 @@ const POINT_COSTS = {
   365: 26,
 };
 
+const PROXY_PLAN_COSTS = {
+  1: 5,
+  3: 13,
+  6: 24,
+  12: 38,
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [lang, setLang] = useState(getSavedLang());
@@ -20,7 +27,7 @@ export default function Dashboard() {
   const [message, setMessage] = useState('');
   const [newTokens, setNewTokens] = useState([]);
   const [history, setHistory] = useState([]);
-  const [proxyForm, setProxyForm] = useState({ whatsapp: '', expires_at: '' });
+  const [proxyForm, setProxyForm] = useState({ whatsapp: '', plan_months: 1 });
   const [proxyMessage, setProxyMessage] = useState('');
   const [proxyConfig, setProxyConfig] = useState(null);
   const [proxyUsers, setProxyUsers] = useState([]);
@@ -84,11 +91,11 @@ export default function Dashboard() {
     try {
       const res = await API.post('/api/reseller/users', {
         whatsapp: proxyForm.whatsapp,
-        expires_at: proxyForm.expires_at,
+        plan_months: Number(proxyForm.plan_months),
       });
       setProxyConfig(res.data);
       setProxyMessage(strings.proxyCreated);
-      setProxyForm({ whatsapp: '', expires_at: '' });
+      setProxyForm({ whatsapp: '', plan_months: 1 });
       await loadProxyUsers();
     } catch (err) {
       setProxyConfig(null);
@@ -98,6 +105,8 @@ export default function Dashboard() {
 
   const pointCost = POINT_COSTS[duration] || 0;
   const totalCost = pointCost * Number(count);
+  const proxyCost = PROXY_PLAN_COSTS[Number(proxyForm.plan_months)] || 0;
+  const canAffordProxy = points >= proxyCost;
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', padding: 16, direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
@@ -151,9 +160,16 @@ export default function Dashboard() {
               <p style={{ marginTop: -6, color: '#475569' }}>{strings.proxySectionSubtitle}</p>
               <label style={labelStyle}>{strings.whatsapp}</label>
               <input type="text" value={proxyForm.whatsapp} onChange={(e) => setProxyForm({ ...proxyForm, whatsapp: e.target.value })} style={inputStyle} required />
-              <label style={labelStyle}>{strings.expiry}</label>
-              <input type="datetime-local" value={proxyForm.expires_at} onChange={(e) => setProxyForm({ ...proxyForm, expires_at: e.target.value })} style={inputStyle} required />
-              <button type="submit" style={{ width: '100%', background: '#0f766e', color: 'white', border: 'none', padding: 14, borderRadius: 10, cursor: 'pointer' }}>{strings.proxyCreate}</button>
+              <label style={labelStyle}>{strings.proxyPlan}</label>
+              <select value={proxyForm.plan_months} onChange={(e) => setProxyForm({ ...proxyForm, plan_months: Number(e.target.value) })} style={inputStyle}>
+                <option value={1}>{strings.proxyPlan1Month}</option>
+                <option value={3}>{strings.proxyPlan3Months}</option>
+                <option value={6}>{strings.proxyPlan6Months}</option>
+                <option value={12}>{strings.proxyPlan1Year}</option>
+              </select>
+              <div style={{ marginBottom: 16, color: '#334155' }}><strong>{strings.proxyCost}:</strong> {proxyCost} {strings.points}</div>
+              <div style={{ marginBottom: 16, color: canAffordProxy ? '#166534' : '#b91c1c' }}><strong>{strings.pointsBalance}:</strong> {points} {strings.points}</div>
+              <button type="submit" disabled={!canAffordProxy} style={{ width: '100%', background: canAffordProxy ? '#0f766e' : '#94a3b8', color: 'white', border: 'none', padding: 14, borderRadius: 10, cursor: canAffordProxy ? 'pointer' : 'not-allowed' }}>{strings.proxyCreate}</button>
               {proxyMessage ? <p style={{ marginTop: 14, color: proxyConfig ? '#0f766e' : '#b91c1c' }}>{proxyMessage}</p> : null}
               {proxyConfig ? (
                 <div style={{ marginTop: 16, background: '#f8fafc', padding: 14, borderRadius: 12 }}>
