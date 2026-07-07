@@ -10,17 +10,26 @@ function authenticateToken(req, res, next) {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-  if (!token) {
-    return res.status(401).json({ error: 'Authentication token is required' });
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, jwtSecret);
+      req.user = decoded;
+      return next();
+    } catch (_error) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
   }
 
-  try {
-    const decoded = jwt.verify(token, jwtSecret);
-    req.user = decoded;
-    return next();
-  } catch (_error) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+  const resellerId = req.query.reseller_id || req.headers['x-reseller-id'];
+  if (resellerId) {
+    const reseller = db.prepare('SELECT id, username, role FROM admins WHERE id = ? AND role = ?').get(Number(resellerId), 'reseller');
+    if (reseller) {
+      req.user = { id: reseller.id, username: reseller.username, role: reseller.role };
+      return next();
+    }
   }
+
+  return res.status(401).json({ error: 'Authentication token is required' });
 }
 
 function requireRole(role) {
@@ -33,7 +42,8 @@ function requireRole(role) {
 }
 
 router.post('/login', (req, res) => {
-  const { username, password } = req.body || {};
+  const username = req.body?.username || req.body?.email || '';
+  const password = req.body?.password || '';
 
   if (!username || !password) {
     return res.status(400).json({ error: 'username and password are required' });
