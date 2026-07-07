@@ -67,8 +67,8 @@ router.post('/users', async (req, res, next) => {
     }
 
     const reseller = db.prepare('SELECT id, points_balance FROM admins WHERE id = ?').get(resellerId);
-    const resellerPoints = Number((reseller && reseller.points_balance) ?? req.user?.points_balance ?? 0);
-    if (!reseller && !req.user) {
+    const resellerPoints = Number(reseller?.points_balance ?? req.user?.points_balance ?? 0);
+    if (!reseller) {
       return res.status(404).json({ error: 'Reseller not found' });
     }
 
