@@ -141,6 +141,14 @@ export default function Dashboard() {
   const createProxyUser = async (e) => {
     e.preventDefault();
     try {
+      const proxyPurchaseResponse = await API.post('/app/reseller/proxy-purchase', {
+        plan_months: Number(proxyForm.plan_months),
+      });
+
+      if (!proxyPurchaseResponse?.data?.ok) {
+        throw new Error(proxyPurchaseResponse?.data?.detail || strings.proxyCreateFailed);
+      }
+
       const res = await ProxyAPI.post('/api/reseller/users', {
         whatsapp: proxyForm.whatsapp,
         plan_months: Number(proxyForm.plan_months),
@@ -152,7 +160,7 @@ export default function Dashboard() {
       await loadData();
     } catch (err) {
       setProxyConfig(null);
-      const backendMessage = err.response?.data?.error || err.response?.data?.message || err.message;
+      const backendMessage = err.response?.data?.detail || err.response?.data?.error || err.response?.data?.message || err.message;
       setProxyMessage(backendMessage || strings.proxyCreateFailed);
     }
   };
