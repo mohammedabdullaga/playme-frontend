@@ -74,7 +74,9 @@ export default function Dashboard() {
   const loadData = async () => {
     try {
       const me = await API.get('/app/reseller/me');
-      setPoints(me.data.points_balance || 0);
+      const nextPoints = Number(me.data.points_balance || 0);
+      setPoints(nextPoints);
+      localStorage.setItem('reseller_points', String(nextPoints));
       const hist = await API.get('/app/reseller/tokens/history');
       setHistory(hist.data || []);
       await loadProxyUsers();
@@ -133,11 +135,11 @@ export default function Dashboard() {
       setProxyConfig(res.data);
       setProxyMessage(strings.proxyCreated);
       setProxyForm({ whatsapp: '', plan_months: 1 });
-      await loadProxyUsers();
-      await loadProxyLogs();
+      await loadData();
     } catch (err) {
       setProxyConfig(null);
-      setProxyMessage(err.response?.data?.error || strings.proxyCreateFailed);
+      const backendMessage = err.response?.data?.error || err.response?.data?.message || err.message;
+      setProxyMessage(backendMessage || strings.proxyCreateFailed);
     }
   };
 
