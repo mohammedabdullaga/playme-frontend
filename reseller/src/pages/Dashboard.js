@@ -316,6 +316,19 @@ export default function Dashboard() {
                   <h4 style={{ marginTop: 0 }}>{strings.proxyConfigTitle}</h4>
                   <div style={{ fontSize: 13, color: '#334155', wordBreak: 'break-all' }}>
                     <div><strong>{strings.proxySubdomain}:</strong> {proxyConfig.subdomain}</div>
+                    <div style={{ marginTop: 8 }}>
+                      <strong>Apple TV URL:</strong>
+                      <div style={{ marginTop: 4 }}>{proxyConfig.config?.appletv_base64 || 'Not available'}</div>
+                      {proxyConfig.config?.appletv_base64 ? (
+                        <button
+                          type="button"
+                          onClick={() => navigator.clipboard.writeText(proxyConfig.config.appletv_base64)}
+                          style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}
+                        >
+                          {strings.copy}
+                        </button>
+                      ) : null}
+                    </div>
                     <div><strong>{strings.proxyServer}:</strong> {proxyConfig.config?.iphone_plain?.server}</div>
                     <div><strong>{strings.proxyPort}:</strong> {proxyConfig.config?.iphone_plain?.port}</div>
                     <div><strong>{strings.proxyUsername}:</strong> {proxyConfig.config?.iphone_plain?.username}</div>
@@ -416,6 +429,19 @@ export default function Dashboard() {
                 <h4 style={{ marginTop: 0 }}>{selectedProxyUser?.whatsapp || strings.proxyConfigTitle}</h4>
                 <div style={{ fontSize: 13, color: '#334155', wordBreak: 'break-all' }}>
                   <div><strong>{strings.proxySubdomain}:</strong> {selectedProxyConfig.subdomain}</div>
+                  <div style={{ marginTop: 8 }}>
+                    <strong>Apple TV URL:</strong>
+                    <div style={{ marginTop: 4 }}>{selectedProxyConfig.config?.appletv_base64 || 'Not available'}</div>
+                    {selectedProxyConfig.config?.appletv_base64 ? (
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(selectedProxyConfig.config.appletv_base64)}
+                        style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}
+                      >
+                        {strings.copy}
+                      </button>
+                    ) : null}
+                  </div>
                   <div><strong>{strings.proxyServer}:</strong> {selectedProxyConfig.config?.iphone_plain?.server}</div>
                   <div><strong>{strings.proxyPort}:</strong> {selectedProxyConfig.config?.iphone_plain?.port}</div>
                   <div><strong>{strings.proxyUsername}:</strong> {selectedProxyConfig.config?.iphone_plain?.username}</div>
