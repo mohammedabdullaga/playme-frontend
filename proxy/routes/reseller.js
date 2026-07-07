@@ -67,12 +67,16 @@ router.post('/users', async (req, res, next) => {
     }
 
     const reseller = db.prepare('SELECT id, points_balance FROM admins WHERE id = ?').get(resellerId);
-    const resellerPoints = Number(reseller?.points_balance ?? req.user?.points_balance ?? 0);
     if (!reseller) {
       return res.status(404).json({ error: 'Reseller not found' });
     }
 
-    if (resellerPoints < planCost) {
+    const incomingPoints = Number(req.user?.points_balance);
+    const effectiveBalance = Number.isFinite(incomingPoints) && incomingPoints >= 0
+      ? incomingPoints
+      : Number(reseller?.points_balance ?? 0);
+
+    if (effectiveBalance < planCost) {
       return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
     }
 
@@ -96,7 +100,8 @@ router.post('/users', async (req, res, next) => {
 
     try {
       if (reseller) {
-        const balanceUpdate = db.prepare('UPDATE admins SET points_balance = points_balance - ? WHERE id = ? AND points_balance >= ?').run(planCost, resellerId, planCost);
+        const nextBalance = effectiveBalance - planCost;
+        const balanceUpdate = db.prepare('UPDATE admins SET points_balance = ? WHERE id = ?').run(nextBalance, resellerId);
         if (!balanceUpdate.changes) {
           db.exec('ROLLBACK');
           return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
