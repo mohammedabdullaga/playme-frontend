@@ -50,6 +50,33 @@ function sanitizeResellerUser(user) {
   };
 }
 
+async function debitResellerPoints(resellerId, normalizedPlan) {
+  const response = await fetch(`${MAIN_BACKEND_URL}/app/reseller/proxy-purchase?reseller_id=${encodeURIComponent(resellerId)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan_months: normalizedPlan }),
+  });
+
+  const pointsResponse = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const errorMessage = pointsResponse?.detail || pointsResponse?.error || 'Insufficient points';
+    const error = new Error(errorMessage);
+    error.statusCode = response.status;
+    throw error;
+  }
+
+  return Number(pointsResponse?.points_cost || 0);
+}
+
+function calculateExtendedExpiryDate(currentExpiresAt, months) {
+  const now = new Date();
+  const current = new Date(currentExpiresAt);
+  const anchor = Number.isNaN(current.getTime()) || current < now ? now : current;
+  const date = new Date(anchor);
+  date.setMonth(date.getMonth() + months);
+  return date.toISOString();
+}
+
 router.post('/users', async (req, res, next) => {
   try {
     const resellerId = req.user.id;
@@ -60,21 +87,12 @@ router.post('/users', async (req, res, next) => {
       return res.status(400).json({ error: 'whatsapp and a valid plan_months are required' });
     }
 
-    let planCost = 0;
-    let pointsResponse = null;
     try {
-      const response = await fetch(`${MAIN_BACKEND_URL}/app/reseller/proxy-purchase?reseller_id=${encodeURIComponent(resellerId)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan_months: normalizedPlan }),
-      });
-      pointsResponse = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        const errorMessage = pointsResponse?.detail || pointsResponse?.error || 'Insufficient points';
-        return res.status(response.status).json({ error: errorMessage });
-      }
-      planCost = Number(pointsResponse?.points_cost || 0);
+      await debitResellerPoints(resellerId, normalizedPlan);
     } catch (error) {
+      if (error.statusCode) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
       return res.status(502).json({ error: 'Unable to validate reseller points' });
     }
 
@@ -121,6 +139,68 @@ router.post('/users', async (req, res, next) => {
       db.exec('ROLLBACK');
       throw error;
     }
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/users/:id/renew', async (req, res, next) => {
+  try {
+    const resellerId = req.user.id;
+    const { plan_months } = req.body || {};
+    const normalizedPlan = Number(plan_months);
+
+    if (!Number.isInteger(normalizedPlan) || ![1, 3, 6, 12].includes(normalizedPlan)) {
+      return res.status(400).json({ error: 'A valid plan_months is required' });
+    }
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ? AND reseller_id = ?').get(req.params.id, resellerId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const proxy = db.prepare('SELECT * FROM proxies WHERE id = ?').get(user.proxy_id);
+    if (!proxy) {
+      return res.status(404).json({ error: 'Proxy not found' });
+    }
+
+    let pointsCost = 0;
+    try {
+      pointsCost = await debitResellerPoints(resellerId, normalizedPlan);
+    } catch (error) {
+      if (error.statusCode) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      return res.status(502).json({ error: 'Unable to validate reseller points' });
+    }
+
+    const nextExpiry = calculateExtendedExpiryDate(user.expires_at, normalizedPlan);
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      let recordId = user.cf_record_id;
+      if (!recordId) {
+        recordId = await createRecord(user.subdomain, proxy.ip);
+      }
+
+      db.prepare('UPDATE users SET expires_at = ?, status = ?, cf_record_id = ? WHERE id = ?')
+        .run(nextExpiry, 'active', recordId, user.id);
+      db.prepare('INSERT INTO audit_logs (reseller_id, user_id, proxy_id, action) VALUES (?, ?, ?, ?)')
+        .run(resellerId, user.id, proxy.id, 'renew');
+
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+
+    const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+    return res.json({
+      success: true,
+      points_cost: pointsCost,
+      user: sanitizeResellerUser(updated),
+      config: buildResellerConfig(updated, proxy).config,
+    });
   } catch (error) {
     next(error);
   }

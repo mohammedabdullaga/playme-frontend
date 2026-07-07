@@ -55,6 +55,8 @@ export default function Dashboard() {
   const [selectedProxyConfig, setSelectedProxyConfig] = useState(null);
   const [selectedProxyError, setSelectedProxyError] = useState('');
   const [selectedProxyLoading, setSelectedProxyLoading] = useState(false);
+  const [renewPlans, setRenewPlans] = useState({});
+  const [renewingUserId, setRenewingUserId] = useState(null);
 
   useEffect(() => {
     const resellerId = localStorage.getItem('reseller_id');
@@ -141,14 +143,6 @@ export default function Dashboard() {
   const createProxyUser = async (e) => {
     e.preventDefault();
     try {
-      const proxyPurchaseResponse = await API.post('/app/reseller/proxy-purchase', {
-        plan_months: Number(proxyForm.plan_months),
-      });
-
-      if (!proxyPurchaseResponse?.data?.ok) {
-        throw new Error(proxyPurchaseResponse?.data?.detail || strings.proxyCreateFailed);
-      }
-
       const res = await ProxyAPI.post('/api/reseller/users', {
         whatsapp: proxyForm.whatsapp,
         plan_months: Number(proxyForm.plan_months),
@@ -162,6 +156,35 @@ export default function Dashboard() {
       setProxyConfig(null);
       const backendMessage = err.response?.data?.detail || err.response?.data?.error || err.response?.data?.message || err.message;
       setProxyMessage(backendMessage || strings.proxyCreateFailed);
+    }
+  };
+
+  const handleRenewProxyUser = async (user) => {
+    const selectedPlan = Number(renewPlans[user.id] || 1);
+
+    try {
+      setRenewingUserId(user.id);
+      setProxyMessage('');
+      setSelectedProxyError('');
+
+      const res = await ProxyAPI.post(`/api/reseller/users/${user.id}/renew`, {
+        plan_months: selectedPlan,
+      });
+
+      const pointsCost = Number(res?.data?.points_cost || PROXY_PLAN_COSTS[selectedPlan] || 0);
+      setProxyMessage(strings.proxyRenewed(selectedPlan, pointsCost));
+      await refreshPoints();
+      await loadProxyUsers(proxyUserSearch);
+      await loadProxyLogs();
+
+      if (selectedProxyUser?.id === user.id) {
+        await handleViewProxyDetails(user);
+      }
+    } catch (err) {
+      const backendMessage = err.response?.data?.detail || err.response?.data?.error || err.response?.data?.message || err.message;
+      setSelectedProxyError(backendMessage || strings.proxyRenewFailed);
+    } finally {
+      setRenewingUserId(null);
     }
   };
 
@@ -314,7 +337,39 @@ export default function Dashboard() {
                         <div style={{ color: '#475569', marginTop: 6 }}>{user.subdomain}</div>
                         <div style={{ color: '#64748b', marginTop: 6 }}>{user.status} • {user.expires_at}</div>
                       </div>
-                      <button type="button" onClick={() => handleViewProxyDetails(user)} style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}>{strings.viewDetails}</button>
+                      <div style={{ display: 'grid', gap: 8, minWidth: 210 }}>
+                        <button type="button" onClick={() => handleViewProxyDetails(user)} style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}>{strings.viewDetails}</button>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <select
+                            value={renewPlans[user.id] || 1}
+                            onChange={(e) => setRenewPlans((prev) => ({ ...prev, [user.id]: Number(e.target.value) }))}
+                            style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', minWidth: 120 }}
+                          >
+                            <option value={1}>{strings.proxyPlan1Month}</option>
+                            <option value={3}>{strings.proxyPlan3Months}</option>
+                            <option value={6}>{strings.proxyPlan6Months}</option>
+                            <option value={12}>{strings.proxyPlan1Year}</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleRenewProxyUser(user)}
+                            disabled={renewingUserId === user.id || points < (PROXY_PLAN_COSTS[Number(renewPlans[user.id] || 1)] || 0)}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: 10,
+                              border: 'none',
+                              background: renewingUserId === user.id ? '#94a3b8' : '#0f766e',
+                              color: 'white',
+                              cursor: renewingUserId === user.id ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {renewingUserId === user.id ? strings.loading : strings.proxyRenew}
+                          </button>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#475569' }}>
+                          {strings.proxyRenewCostLabel}: {PROXY_PLAN_COSTS[Number(renewPlans[user.id] || 1)] || 0} {strings.points}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
