@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import API, { ProxyAPI } from '../api/api';
 import { getSavedLang, getStrings, saveLang } from '../i18n';
 
@@ -31,6 +31,23 @@ const inputStyle = {
   border: '1px solid #cbd5e1',
   marginBottom: 14,
   fontSize: 14,
+};
+
+const navLinkStyle = {
+  padding: '9px 14px',
+  borderRadius: 10,
+  textDecoration: 'none',
+  border: '1px solid #cbd5e1',
+  color: '#0f172a',
+  background: 'white',
+  fontWeight: 600,
+};
+
+const activeNavLinkStyle = {
+  ...navLinkStyle,
+  background: '#0f766e',
+  color: 'white',
+  border: '1px solid #0f766e',
 };
 
 export default function Dashboard() {
@@ -218,7 +235,11 @@ export default function Dashboard() {
     <div style={{ minHeight: '100vh', background: '#f8fafc', padding: 16, direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 18 }}>
-          <div>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Link to="/dashboard" style={activeNavLinkStyle}>{strings.navDashboard}</Link>
+              <Link to="/info" style={navLinkStyle}>{strings.navInfo}</Link>
+            </div>
             <h1 style={{ margin: 0 }}>{strings.panelTitle}</h1>
             <p style={{ margin: '8px 0 0', color: '#475569' }}>{strings.pointsBalance}: <strong>{points}</strong></p>
           </div>

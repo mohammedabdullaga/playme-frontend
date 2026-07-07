@@ -3,6 +3,8 @@ const defaultLang = 'ar';
 const strings = {
   ar: {
     panelTitle: 'لوحة الموزع',
+    navDashboard: 'اللوحة الرئيسية',
+    navInfo: 'المعلومات',
     signInTitle: 'تسجيل الدخول',
     signInSubtitle: 'سجل دخولك لإنشاء الرموز ومراقبة النقاط',
     email: 'البريد الإلكتروني',
@@ -51,6 +53,8 @@ const strings = {
     noProxyUsers: 'لا توجد حسابات بعد',
     noProxyLogs: 'لا يوجد سجل نشاط بعد',
     loading: 'جاري التحميل...',
+    infoTitle: 'معلومات التطبيقات والتفعيل',
+    infoSubtitle: 'استخدم هذه البيانات لمساعدة العميل في التثبيت والتفعيل بسرعة.',
     proxyRenew: 'تجديد/تمديد',
     proxyRenewCostLabel: 'تكلفة التجديد',
     proxyRenewFailed: 'فشل تجديد الحساب',
@@ -60,6 +64,8 @@ const strings = {
   },
   en: {
     panelTitle: 'Reseller Panel',
+    navDashboard: 'Dashboard',
+    navInfo: 'Info',
     signInTitle: 'Sign In',
     signInSubtitle: 'Sign in to create tokens and monitor points',
     email: 'Email',
@@ -107,6 +113,8 @@ const strings = {
     noProxyUsers: 'No accounts yet',
     noProxyLogs: 'No activity yet',
     loading: 'Loading...',
+    infoTitle: 'App And Activation Info',
+    infoSubtitle: 'Use these details to help customers install and activate quickly.',
     proxyRenew: 'Renew / Extend',
     proxyRenewCostLabel: 'Renewal cost',
     proxyRenewFailed: 'Failed to renew account',
