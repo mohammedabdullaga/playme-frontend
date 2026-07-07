@@ -86,6 +86,19 @@ export default function Dashboard() {
     }
   };
 
+  const refreshPoints = async () => {
+    try {
+      const me = await API.get('/app/reseller/me');
+      const nextPoints = Number(me.data.points_balance || 0);
+      setPoints(nextPoints);
+      localStorage.setItem('reseller_points', String(nextPoints));
+      return nextPoints;
+    } catch (err) {
+      console.error(err);
+      return points;
+    }
+  };
+
   const loadProxyUsers = async (search = '') => {
     try {
       setProxyLoading(true);
@@ -135,6 +148,7 @@ export default function Dashboard() {
       setProxyConfig(res.data);
       setProxyMessage(strings.proxyCreated);
       setProxyForm({ whatsapp: '', plan_months: 1 });
+      await refreshPoints();
       await loadData();
     } catch (err) {
       setProxyConfig(null);

@@ -7,12 +7,7 @@ const { requireRole } = require('./auth');
 const router = express.Router();
 router.use(requireRole('reseller'));
 
-const PROXY_PLAN_COSTS = {
-  1: 5,
-  3: 13,
-  6: 24,
-  12: 38,
-};
+const MAIN_BACKEND_URL = process.env.MAIN_BACKEND_URL || 'https://api.playmetod.store';
 
 function buildResellerConfig(user, proxy) {
   const server = `${user.subdomain}.${baseDomain}`;
@@ -60,20 +55,27 @@ router.post('/users', async (req, res, next) => {
     const resellerId = req.user.id;
     const { whatsapp, plan_months } = req.body || {};
     const normalizedPlan = Number(plan_months);
-    const planCost = PROXY_PLAN_COSTS[normalizedPlan];
 
-    if (!whatsapp || !Number.isInteger(normalizedPlan) || !planCost) {
+    if (!whatsapp || !Number.isInteger(normalizedPlan) || ![1, 3, 6, 12].includes(normalizedPlan)) {
       return res.status(400).json({ error: 'whatsapp and a valid plan_months are required' });
     }
 
-    const reseller = db.prepare('SELECT id, points_balance FROM admins WHERE id = ?').get(resellerId);
-    if (!reseller) {
-      return res.status(404).json({ error: 'Reseller not found' });
-    }
-
-    const currentBalance = Number(reseller?.points_balance ?? 0);
-    if (currentBalance < planCost) {
-      return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points, but the reseller balance is ${currentBalance}.` });
+    let planCost = 0;
+    let pointsResponse = null;
+    try {
+      const response = await fetch(`${MAIN_BACKEND_URL}/app/reseller/proxy-purchase?reseller_id=${encodeURIComponent(resellerId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_months: normalizedPlan }),
+      });
+      pointsResponse = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const errorMessage = pointsResponse?.detail || pointsResponse?.error || 'Insufficient points';
+        return res.status(response.status).json({ error: errorMessage });
+      }
+      planCost = Number(pointsResponse?.points_cost || 0);
+    } catch (error) {
+      return res.status(502).json({ error: 'Unable to validate reseller points' });
     }
 
     const proxy = db.prepare(`
@@ -95,19 +97,6 @@ router.post('/users', async (req, res, next) => {
     db.exec('BEGIN IMMEDIATE');
 
     try {
-      const freshReseller = db.prepare('SELECT id, points_balance FROM admins WHERE id = ?').get(resellerId);
-      const freshBalance = Number(freshReseller?.points_balance ?? 0);
-      if (freshBalance < planCost) {
-        db.exec('ROLLBACK');
-        return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points, but the reseller balance is ${freshBalance}.` });
-      }
-
-      const balanceUpdate = db.prepare('UPDATE admins SET points_balance = points_balance - ? WHERE id = ? AND points_balance >= ?').run(planCost, resellerId, planCost);
-      if (!balanceUpdate.changes) {
-        db.exec('ROLLBACK');
-        return res.status(402).json({ error: `Insufficient points. This plan costs ${planCost} points.` });
-      }
-
       let subdomain = generateSubdomain();
       let attempts = 0;
       while (db.prepare('SELECT id FROM users WHERE subdomain = ?').get(subdomain) && attempts < 20) {
