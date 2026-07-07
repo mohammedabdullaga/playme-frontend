@@ -1,0 +1,13 @@
+node_modules
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+frontend/dist
+*.db
+*.sqlite
+*.log
+dist
+coverage

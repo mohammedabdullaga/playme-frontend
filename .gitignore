@@ -22,4 +22,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .env
+.env.*
+proxy/.env
+proxy/.env.*
+proxy/frontend/.env
+proxy/frontend/.env.*
+proxy/frontend/dist
+proxy/**/node_modules
+proxy/**/*.db
+proxy/**/*.sqlite
+proxy/**/*.log
 API_DOCUMENTS.md

@@ -1,0 +1,17 @@
+{
+  "name": "proxy-management-panel",
+  "version": "1.0.0",
+  "description": "Node.js + Express + SQLite proxy management backend",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.1",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^3.0.1"
+  }
+}
