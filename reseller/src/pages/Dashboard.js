@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import API from '../api/api';
+import API, { ProxyAPI } from '../api/api';
 import { getSavedLang, getStrings, saveLang } from '../i18n';
 
 const POINT_COSTS = {
@@ -31,7 +31,9 @@ export default function Dashboard() {
   const [proxyMessage, setProxyMessage] = useState('');
   const [proxyConfig, setProxyConfig] = useState(null);
   const [proxyUsers, setProxyUsers] = useState([]);
+  const [proxyLogs, setProxyLogs] = useState([]);
   const [proxyLoading, setProxyLoading] = useState(false);
+  const [proxyLogsLoading, setProxyLogsLoading] = useState(false);
 
   useEffect(() => {
     const resellerId = localStorage.getItem('reseller_id');
@@ -55,6 +57,7 @@ export default function Dashboard() {
       const hist = await API.get('/app/reseller/tokens/history');
       setHistory(hist.data || []);
       await loadProxyUsers();
+      await loadProxyLogs();
     } catch (err) {
       console.error(err);
     }
@@ -63,13 +66,26 @@ export default function Dashboard() {
   const loadProxyUsers = async () => {
     try {
       setProxyLoading(true);
-      const res = await API.get('/api/reseller/users');
+      const res = await ProxyAPI.get('/api/reseller/users');
       setProxyUsers(res.data || []);
     } catch (err) {
       console.error(err);
       setProxyUsers([]);
     } finally {
       setProxyLoading(false);
+    }
+  };
+
+  const loadProxyLogs = async () => {
+    try {
+      setProxyLogsLoading(true);
+      const res = await ProxyAPI.get('/api/reseller/logs');
+      setProxyLogs(res.data || []);
+    } catch (err) {
+      console.error(err);
+      setProxyLogs([]);
+    } finally {
+      setProxyLogsLoading(false);
     }
   };
 
@@ -89,7 +105,7 @@ export default function Dashboard() {
   const createProxyUser = async (e) => {
     e.preventDefault();
     try {
-      const res = await API.post('/api/reseller/users', {
+      const res = await ProxyAPI.post('/api/reseller/users', {
         whatsapp: proxyForm.whatsapp,
         plan_months: Number(proxyForm.plan_months),
       });
@@ -97,6 +113,7 @@ export default function Dashboard() {
       setProxyMessage(strings.proxyCreated);
       setProxyForm({ whatsapp: '', plan_months: 1 });
       await loadProxyUsers();
+      await loadProxyLogs();
     } catch (err) {
       setProxyConfig(null);
       setProxyMessage(err.response?.data?.error || strings.proxyCreateFailed);
@@ -216,6 +233,23 @@ export default function Dashboard() {
                     <div style={{ fontWeight: 600 }}>{user.whatsapp}</div>
                     <div style={{ color: '#475569', marginTop: 6 }}>{user.subdomain}</div>
                     <div style={{ color: '#64748b', marginTop: 6 }}>{user.status} • {user.expires_at}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)' }}>
+            <h3 style={{ marginTop: 0 }}>{strings.proxyLogsTitle}</h3>
+            {proxyLogsLoading ? <p>{strings.loading}</p> : (
+              <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+                {proxyLogs.length === 0 ? (
+                  <p>{strings.noProxyLogs}</p>
+                ) : proxyLogs.map((log) => (
+                  <div key={log.id} style={{ borderRadius: 14, border: '1px solid #e2e8f0', padding: 14 }}>
+                    <div style={{ fontWeight: 600 }}>{log.action}</div>
+                    <div style={{ color: '#475569', marginTop: 6 }}>{log.whatsapp || log.subdomain || log.proxy_label || 'Proxy activity'}</div>
+                    <div style={{ color: '#64748b', marginTop: 6 }}>{log.created_at}</div>
                   </div>
                 ))}
               </div>

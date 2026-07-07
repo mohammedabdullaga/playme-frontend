@@ -135,6 +135,25 @@ function calculateExpiryDate(months) {
   return date.toISOString().slice(0, 19);
 }
 
+router.get('/logs', (req, res, next) => {
+  try {
+    const resellerId = req.user.id;
+    const logs = db.prepare(`
+      SELECT a.id, a.action, a.created_at, u.whatsapp, u.subdomain, p.label AS proxy_label
+      FROM audit_logs a
+      LEFT JOIN users u ON u.id = a.user_id
+      LEFT JOIN proxies p ON p.id = a.proxy_id
+      WHERE a.reseller_id = ?
+      ORDER BY a.created_at DESC
+      LIMIT 50
+    `).all(resellerId);
+
+    return res.json(logs);
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/users', (req, res, next) => {
   try {
     const resellerId = req.user.id;
