@@ -20,6 +20,11 @@ export default function Dashboard() {
   const [message, setMessage] = useState('');
   const [newTokens, setNewTokens] = useState([]);
   const [history, setHistory] = useState([]);
+  const [proxyForm, setProxyForm] = useState({ whatsapp: '', expires_at: '' });
+  const [proxyMessage, setProxyMessage] = useState('');
+  const [proxyConfig, setProxyConfig] = useState(null);
+  const [proxyUsers, setProxyUsers] = useState([]);
+  const [proxyLoading, setProxyLoading] = useState(false);
 
   useEffect(() => {
     const resellerId = localStorage.getItem('reseller_id');
@@ -42,8 +47,22 @@ export default function Dashboard() {
       setPoints(me.data.points_balance || 0);
       const hist = await API.get('/app/reseller/tokens/history');
       setHistory(hist.data || []);
+      await loadProxyUsers();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const loadProxyUsers = async () => {
+    try {
+      setProxyLoading(true);
+      const res = await API.get('/api/reseller/users');
+      setProxyUsers(res.data || []);
+    } catch (err) {
+      console.error(err);
+      setProxyUsers([]);
+    } finally {
+      setProxyLoading(false);
     }
   };
 
@@ -57,6 +76,23 @@ export default function Dashboard() {
     } catch (err) {
       setMessage(err.response?.data?.detail || strings.failedCreate);
       setNewTokens([]);
+    }
+  };
+
+  const createProxyUser = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await API.post('/api/reseller/users', {
+        whatsapp: proxyForm.whatsapp,
+        expires_at: proxyForm.expires_at,
+      });
+      setProxyConfig(res.data);
+      setProxyMessage(strings.proxyCreated);
+      setProxyForm({ whatsapp: '', expires_at: '' });
+      await loadProxyUsers();
+    } catch (err) {
+      setProxyConfig(null);
+      setProxyMessage(err.response?.data?.error || strings.proxyCreateFailed);
     }
   };
 
@@ -77,37 +113,62 @@ export default function Dashboard() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20 }}>
-          <form onSubmit={generateTokens} style={{ background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)' }}>
-            <h3 style={{ marginTop: 0 }}>{strings.createTokens}</h3>
-            <label style={labelStyle}>{strings.duration}</label>
-            <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} style={inputStyle}>
-              <option value={30}>30 {strings.tokenDays}</option>
-              <option value={90}>90 {strings.tokenDays}</option>
-              <option value={180}>180 {strings.tokenDays}</option>
-              <option value={365}>365 {strings.tokenDays}</option>
-            </select>
-            <label style={labelStyle}>{strings.quantity}</label>
-            <input type="number" min="1" value={count} onChange={(e) => setCount(e.target.value)} style={inputStyle} />
-            <div style={{ display: 'grid', gap: 10, marginBottom: 16, color: '#334155' }}>
-              <div><strong>{strings.costPerToken}:</strong> {pointCost} {strings.points}</div>
-              <div><strong>{strings.totalCost}:</strong> {totalCost} {strings.points}</div>
-            </div>
-            <button type="submit" style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: 14, borderRadius: 10, cursor: 'pointer' }}>{strings.generate}</button>
-            {message ? <p style={{ marginTop: 14, color: '#1d4ed8' }}>{message}</p> : null}
-            {newTokens.length > 0 ? (
-              <div style={{ marginTop: 20, background: '#f8fafc', padding: 16, borderRadius: 12 }}>
-                <h4 style={{ marginTop: 0 }}>{strings.newTokensTitle}</h4>
-                {newTokens.map((token, idx) => (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 8, padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                    <span style={{ wordBreak: 'break-all' }}>{token}</span>
-                    <button type="button" onClick={() => navigator.clipboard.writeText(token)} style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
-                      {strings.copy}
-                    </button>
-                  </div>
-                ))}
+          <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+            <form onSubmit={generateTokens} style={{ background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)' }}>
+              <h3 style={{ marginTop: 0 }}>{strings.createTokens}</h3>
+              <label style={labelStyle}>{strings.duration}</label>
+              <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} style={inputStyle}>
+                <option value={30}>30 {strings.tokenDays}</option>
+                <option value={90}>90 {strings.tokenDays}</option>
+                <option value={180}>180 {strings.tokenDays}</option>
+                <option value={365}>365 {strings.tokenDays}</option>
+              </select>
+              <label style={labelStyle}>{strings.quantity}</label>
+              <input type="number" min="1" value={count} onChange={(e) => setCount(e.target.value)} style={inputStyle} />
+              <div style={{ display: 'grid', gap: 10, marginBottom: 16, color: '#334155' }}>
+                <div><strong>{strings.costPerToken}:</strong> {pointCost} {strings.points}</div>
+                <div><strong>{strings.totalCost}:</strong> {totalCost} {strings.points}</div>
               </div>
-            ) : null}
-          </form>
+              <button type="submit" style={{ width: '100%', background: '#2563eb', color: 'white', border: 'none', padding: 14, borderRadius: 10, cursor: 'pointer' }}>{strings.generate}</button>
+              {message ? <p style={{ marginTop: 14, color: '#1d4ed8' }}>{message}</p> : null}
+              {newTokens.length > 0 ? (
+                <div style={{ marginTop: 20, background: '#f8fafc', padding: 16, borderRadius: 12 }}>
+                  <h4 style={{ marginTop: 0 }}>{strings.newTokensTitle}</h4>
+                  {newTokens.map((token, idx) => (
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 8, padding: '10px 12px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                      <span style={{ wordBreak: 'break-all' }}>{token}</span>
+                      <button type="button" onClick={() => navigator.clipboard.writeText(token)} style={{ padding: '8px 14px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>
+                        {strings.copy}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </form>
+
+            <form onSubmit={createProxyUser} style={{ background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)' }}>
+              <h3 style={{ marginTop: 0 }}>{strings.proxySectionTitle}</h3>
+              <p style={{ marginTop: -6, color: '#475569' }}>{strings.proxySectionSubtitle}</p>
+              <label style={labelStyle}>{strings.whatsapp}</label>
+              <input type="text" value={proxyForm.whatsapp} onChange={(e) => setProxyForm({ ...proxyForm, whatsapp: e.target.value })} style={inputStyle} required />
+              <label style={labelStyle}>{strings.expiry}</label>
+              <input type="datetime-local" value={proxyForm.expires_at} onChange={(e) => setProxyForm({ ...proxyForm, expires_at: e.target.value })} style={inputStyle} required />
+              <button type="submit" style={{ width: '100%', background: '#0f766e', color: 'white', border: 'none', padding: 14, borderRadius: 10, cursor: 'pointer' }}>{strings.proxyCreate}</button>
+              {proxyMessage ? <p style={{ marginTop: 14, color: proxyConfig ? '#0f766e' : '#b91c1c' }}>{proxyMessage}</p> : null}
+              {proxyConfig ? (
+                <div style={{ marginTop: 16, background: '#f8fafc', padding: 14, borderRadius: 12 }}>
+                  <h4 style={{ marginTop: 0 }}>{strings.proxyConfigTitle}</h4>
+                  <div style={{ fontSize: 13, color: '#334155', wordBreak: 'break-all' }}>
+                    <div><strong>{strings.proxySubdomain}:</strong> {proxyConfig.subdomain}</div>
+                    <div><strong>{strings.proxyServer}:</strong> {proxyConfig.config?.iphone_plain?.server}</div>
+                    <div><strong>{strings.proxyPort}:</strong> {proxyConfig.config?.iphone_plain?.port}</div>
+                    <div><strong>{strings.proxyUsername}:</strong> {proxyConfig.config?.iphone_plain?.username}</div>
+                    <div><strong>{strings.proxyPassword}:</strong> {proxyConfig.config?.iphone_plain?.password}</div>
+                  </div>
+                </div>
+              ) : null}
+            </form>
+          </div>
 
           <div style={{ background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)' }}>
             <h3 style={{ marginTop: 0 }}>{strings.recentHistory}</h3>
@@ -126,6 +187,23 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div style={{ background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)' }}>
+            <h3 style={{ marginTop: 0 }}>{strings.proxyUsersTitle}</h3>
+            {proxyLoading ? <p>{strings.loading}</p> : (
+              <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+                {proxyUsers.length === 0 ? (
+                  <p>{strings.noProxyUsers}</p>
+                ) : proxyUsers.map((user) => (
+                  <div key={user.id} style={{ borderRadius: 14, border: '1px solid #e2e8f0', padding: 14 }}>
+                    <div style={{ fontWeight: 600 }}>{user.whatsapp}</div>
+                    <div style={{ color: '#475569', marginTop: 6 }}>{user.subdomain}</div>
+                    <div style={{ color: '#64748b', marginTop: 6 }}>{user.status} • {user.expires_at}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
