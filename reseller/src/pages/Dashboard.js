@@ -135,6 +135,10 @@ export default function Dashboard() {
       setProxyConfig(res.data);
       setProxyMessage(strings.proxyCreated);
       setProxyForm({ whatsapp: '', plan_months: 1 });
+      await API.post('/app/reseller/points/debit', {
+        amount: PROXY_PLAN_COSTS[Number(proxyForm.plan_months)] || 0,
+        reason: 'proxy_activation',
+      });
       await loadData();
     } catch (err) {
       setProxyConfig(null);
