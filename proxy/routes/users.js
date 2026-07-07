@@ -133,6 +133,26 @@ router.post('/:id/disable', async (req, res, next) => {
   }
 });
 
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.cf_record_id) {
+      await deleteRecord(user.cf_record_id);
+    }
+
+    db.prepare('DELETE FROM audit_logs WHERE user_id = ?').run(user.id);
+    db.prepare('DELETE FROM users WHERE id = ?').run(user.id);
+
+    return res.json({ success: true, id: user.id });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/:id/reactivate', async (req, res, next) => {
   try {
     const { expires_at } = req.body || {};

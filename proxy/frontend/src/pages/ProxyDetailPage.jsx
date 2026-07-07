@@ -1,7 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { createUser, disableUser, getUserConfig, getUsers, reactivateUser } from '../api/client';
+import { createUser, deleteUser, disableUser, getUserConfig, getUsers, reactivateUser } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+
+function toDateTimeLocalValue(value) {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+
+  const pad = (num) => String(num).padStart(2, '0');
+  const year = parsed.getFullYear();
+  const month = pad(parsed.getMonth() + 1);
+  const day = pad(parsed.getDate());
+  const hour = pad(parsed.getHours());
+  const minute = pad(parsed.getMinutes());
+
+  return `${year}-${month}-${day}T${hour}:${minute}`;
+}
 
 export default function ProxyDetailPage() {
   const { id } = useParams();
@@ -15,6 +30,7 @@ export default function ProxyDetailPage() {
   const [configData, setConfigData] = useState(null);
   const [form, setForm] = useState({ whatsapp: '', expires_at: '' });
   const [reactivatingId, setReactivatingId] = useState(null);
+  const [reactivateForm, setReactivateForm] = useState({ userId: null, expiresAt: '' });
 
   async function loadUsers() {
     try {
@@ -58,17 +74,41 @@ export default function ProxyDetailPage() {
     }
   }
 
+  function openReactivateForm(user) {
+    setReactivateForm({ userId: user.id, expiresAt: toDateTimeLocalValue(user.expires_at) });
+  }
+
+  function closeReactivateForm() {
+    setReactivateForm({ userId: null, expiresAt: '' });
+  }
+
   async function handleReactivate(userId) {
-    const expiresAt = window.prompt('New expires_at (ISO string)');
-    if (!expiresAt) return;
+    if (!reactivateForm.expiresAt) {
+      setError('Please choose a new expiry date before reactivating');
+      return;
+    }
+
+    const expiresAtIso = new Date(reactivateForm.expiresAt).toISOString();
+
     try {
       setReactivatingId(userId);
-      await reactivateUser(userId, expiresAt, token);
+      await reactivateUser(userId, expiresAtIso, token);
+      closeReactivateForm();
       await loadUsers();
     } catch (err) {
       setError(err.message || 'Failed to reactivate user');
     } finally {
       setReactivatingId(null);
+    }
+  }
+
+  async function handleDelete(userId) {
+    if (!window.confirm('Delete this user permanently?')) return;
+    try {
+      await deleteUser(userId, token);
+      await loadUsers();
+    } catch (err) {
+      setError(err.message || 'Failed to delete user');
     }
   }
 
@@ -111,8 +151,28 @@ export default function ProxyDetailPage() {
                 <div className="mt-3 flex flex-wrap gap-2 text-sm">
                   <button className="rounded-lg border border-slate-700 px-3 py-2" onClick={() => handleViewConfig(user.id)}>View Config</button>
                   <button className="rounded-lg border border-slate-700 px-3 py-2" onClick={() => handleDisable(user.id)} disabled={user.status !== 'active'}>Disable</button>
-                  <button className="rounded-lg border border-slate-700 px-3 py-2" onClick={() => handleReactivate(user.id)} disabled={reactivatingId === user.id}>Reactivate</button>
+                  <button className="rounded-lg border border-slate-700 px-3 py-2" onClick={() => handleDelete(user.id)}>Delete</button>
+                  <button className="rounded-lg border border-slate-700 px-3 py-2" onClick={() => openReactivateForm(user)} disabled={reactivatingId === user.id}>Reactivate</button>
                 </div>
+                {reactivateForm.userId === user.id ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    <input
+                      className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2"
+                      type="datetime-local"
+                      value={reactivateForm.expiresAt}
+                      onChange={(e) => setReactivateForm({ userId: user.id, expiresAt: e.target.value })}
+                      required
+                    />
+                    <button
+                      className="rounded-lg bg-cyan-500 px-3 py-2 font-medium text-slate-950"
+                      onClick={() => handleReactivate(user.id)}
+                      disabled={reactivatingId === user.id}
+                    >
+                      {reactivatingId === user.id ? 'Reactivating...' : 'Confirm'}
+                    </button>
+                    <button className="rounded-lg border border-slate-700 px-3 py-2" onClick={closeReactivateForm}>Cancel</button>
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

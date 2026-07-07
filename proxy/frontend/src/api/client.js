@@ -83,6 +83,10 @@ export function disableUser(id, token) {
   return request(`/api/users/${id}/disable`, { method: 'POST', token });
 }
 
+export function deleteUser(id, token) {
+  return request(`/api/users/${id}`, { method: 'DELETE', token });
+}
+
 export function reactivateUser(id, expiresAt, token) {
   return request(`/api/users/${id}/reactivate`, { method: 'POST', body: { expires_at: expiresAt }, token });
 }
