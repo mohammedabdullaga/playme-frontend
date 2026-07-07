@@ -74,10 +74,25 @@ router.delete('/:id', (req, res) => {
     return res.status(404).json({ error: 'Proxy not found' });
   }
 
-  db.prepare('DELETE FROM users WHERE proxy_id = ?').run(id);
-  db.prepare('DELETE FROM proxies WHERE id = ?').run(id);
+  db.exec('BEGIN IMMEDIATE');
 
-  return res.json({ deleted: true, id: Number(id) });
+  try {
+    const userIds = db.prepare('SELECT id FROM users WHERE proxy_id = ?').all(id).map((user) => user.id);
+    if (userIds.length > 0) {
+      const placeholders = userIds.map(() => '?').join(',');
+      db.prepare(`DELETE FROM audit_logs WHERE user_id IN (${placeholders})`).run(...userIds);
+    }
+
+    db.prepare('DELETE FROM users WHERE proxy_id = ?').run(id);
+    db.prepare('DELETE FROM audit_logs WHERE proxy_id = ?').run(id);
+    db.prepare('DELETE FROM proxies WHERE id = ?').run(id);
+    db.exec('COMMIT');
+
+    return res.json({ deleted: true, id: Number(id) });
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  }
 });
 
 module.exports = router;
