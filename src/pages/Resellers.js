@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   adminCreateReseller,
   adminDeleteReseller,
+  adminGetResellerActivity,
   adminGetResellerPricing,
   adminGetResellers,
   adminTopUpReseller,
@@ -26,6 +27,7 @@ export default function Resellers() {
     proxy_6: DEFAULT_PROXY_COSTS[6],
     proxy_12: DEFAULT_PROXY_COSTS[12],
   });
+  const [activityItems, setActivityItems] = useState([]);
   const [message, setMessage] = useState("");
 
   const loadResellers = async () => {
@@ -57,9 +59,19 @@ export default function Resellers() {
     }
   };
 
+  const loadActivity = async () => {
+    try {
+      const res = await adminGetResellerActivity();
+      setActivityItems(res.data?.items || []);
+    } catch (err) {
+      setMessage(err.response?.data?.detail || "Failed to load reseller activity");
+    }
+  };
+
   useEffect(() => {
     loadResellers();
     loadPricing();
+    loadActivity();
   }, []);
 
   const handleSavePricing = async (e) => {
@@ -81,6 +93,7 @@ export default function Resellers() {
       });
       setMessage("Pricing updated");
       await loadPricing();
+      await loadActivity();
     } catch (err) {
       setMessage(err.response?.data?.detail || "Failed to update pricing");
     }
@@ -93,6 +106,7 @@ export default function Resellers() {
       setMessage("Reseller created");
       setForm({ email: "", password: "", points_balance: 0, is_active: true });
       await loadResellers();
+      await loadActivity();
     } catch (err) {
       setMessage(err.response?.data?.detail || "Create failed");
     }
@@ -105,6 +119,7 @@ export default function Resellers() {
       await adminTopUpReseller({ reseller_id: resellerId, amount: Number(amount), reason: "admin_top_up" });
       setMessage("Points updated");
       await loadResellers();
+      await loadActivity();
     } catch (err) {
       setMessage(err.response?.data?.detail || "Top-up failed");
     }
@@ -114,6 +129,7 @@ export default function Resellers() {
     try {
       await adminUpdateReseller(reseller.id, { is_active: !reseller.is_active });
       await loadResellers();
+      await loadActivity();
     } catch (err) {
       setMessage(err.response?.data?.detail || "Update failed");
     }
@@ -135,6 +151,7 @@ export default function Resellers() {
       await adminDeleteReseller(resellerId);
       setMessage("Reseller deleted");
       await loadResellers();
+      await loadActivity();
     } catch (err) {
       setMessage(err.response?.data?.detail || "Delete failed");
     }
@@ -155,6 +172,7 @@ export default function Resellers() {
       setSelectedReseller(null);
       setForm({ email: "", password: "", points_balance: 0, is_active: true });
       await loadResellers();
+      await loadActivity();
     } catch (err) {
       setMessage(err.response?.data?.detail || "Update failed");
     }
@@ -258,6 +276,27 @@ export default function Resellers() {
                 <button onClick={() => handleTopUp(reseller.id)} style={primaryButtonStyle}>Top up</button>
                 <button onClick={() => toggleActive(reseller)} style={mutedButtonStyle}>{reseller.is_active ? "Disable" : "Enable"}</button>
                 <button onClick={() => handleDelete(reseller.id)} style={dangerButtonStyle}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={sectionTitleStyle}>Activity logs</h3>
+        <div style={{ display: "grid", gap: 8 }}>
+          {activityItems.length === 0 ? (
+            <div style={{ color: "#64748b" }}>No activity yet.</div>
+          ) : activityItems.map((item) => (
+            <div key={item.id} style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid #e2e8f0", background: "#f8fafc" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: "#0f172a" }}>{item.reseller_email || `Reseller #${item.reseller_id}`}</div>
+                  <div style={{ color: "#475569", marginTop: 4 }}>
+                    {item.kind} • amount: {item.amount} • {item.reason}
+                  </div>
+                </div>
+                <div style={{ color: "#64748b", fontSize: 13 }}>{new Date(item.created_at).toLocaleString()}</div>
               </div>
             </div>
           ))}

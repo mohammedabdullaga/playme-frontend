@@ -34,6 +34,7 @@ function App() {
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/status" element={<ProtectedRoute><AppStatus /></ProtectedRoute>} />
               <Route path="/proxy" element={<ProtectedRoute><Proxy /></ProtectedRoute>} />
+              <Route path="/reseller-panel" element={<ProtectedRoute><Resellers /></ProtectedRoute>} />
               <Route path="/resellers" element={<ProtectedRoute><Resellers /></ProtectedRoute>} />
             </Routes>
             </div>
