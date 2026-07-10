@@ -13,6 +13,38 @@ import {
 const DEFAULT_TOKEN_COSTS = { 30: 3, 90: 8, 180: 15, 365: 26 };
 const DEFAULT_PROXY_COSTS = { 1: 5, 3: 13, 6: 24, 12: 38 };
 
+function formatApiError(err, fallback) {
+  const detail = err?.response?.data?.detail;
+
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail
+      .map((item) => {
+        if (typeof item === "string") {
+          return item;
+        }
+
+        if (item && typeof item === "object") {
+          const location = Array.isArray(item.loc) ? item.loc.join(".") : item.loc;
+          const message = item.msg || item.message || "Validation error";
+          return location ? `${location}: ${message}` : message;
+        }
+
+        return String(item);
+      })
+      .join("; ");
+  }
+
+  if (detail && typeof detail === "object") {
+    return detail.msg || detail.message || fallback;
+  }
+
+  return err?.response?.data?.error || err?.message || fallback;
+}
+
 export default function Resellers() {
   const [resellers, setResellers] = useState([]);
   const [selectedReseller, setSelectedReseller] = useState(null);
@@ -35,7 +67,7 @@ export default function Resellers() {
       const res = await adminGetResellers();
       setResellers(res.data || []);
     } catch (err) {
-      setMessage(err.response?.data?.detail || "Failed to load resellers");
+      setMessage(formatApiError(err, "Failed to load resellers"));
     }
   };
 
@@ -55,7 +87,7 @@ export default function Resellers() {
         proxy_12: Number(proxyCosts[12] ?? DEFAULT_PROXY_COSTS[12]),
       });
     } catch (err) {
-      setMessage(err.response?.data?.detail || "Failed to load pricing");
+      setMessage(formatApiError(err, "Failed to load pricing"));
     }
   };
 
@@ -64,7 +96,7 @@ export default function Resellers() {
       const res = await adminGetResellerActivity();
       setActivityItems(res.data?.items || []);
     } catch (err) {
-      setMessage(err.response?.data?.detail || "Failed to load reseller activity");
+      setMessage(formatApiError(err, "Failed to load reseller activity"));
     }
   };
 
@@ -95,7 +127,7 @@ export default function Resellers() {
       await loadPricing();
       await loadActivity();
     } catch (err) {
-      setMessage(err.response?.data?.detail || "Failed to update pricing");
+      setMessage(formatApiError(err, "Failed to update pricing"));
     }
   };
 
@@ -108,7 +140,7 @@ export default function Resellers() {
       await loadResellers();
       await loadActivity();
     } catch (err) {
-      setMessage(err.response?.data?.detail || "Create failed");
+      setMessage(formatApiError(err, "Create failed"));
     }
   };
 
@@ -121,7 +153,7 @@ export default function Resellers() {
       await loadResellers();
       await loadActivity();
     } catch (err) {
-      setMessage(err.response?.data?.detail || "Top-up failed");
+      setMessage(formatApiError(err, "Top-up failed"));
     }
   };
 
@@ -131,7 +163,7 @@ export default function Resellers() {
       await loadResellers();
       await loadActivity();
     } catch (err) {
-      setMessage(err.response?.data?.detail || "Update failed");
+      setMessage(formatApiError(err, "Update failed"));
     }
   };
 
@@ -153,7 +185,7 @@ export default function Resellers() {
       await loadResellers();
       await loadActivity();
     } catch (err) {
-      setMessage(err.response?.data?.detail || "Delete failed");
+      setMessage(formatApiError(err, "Delete failed"));
     }
   };
 
@@ -174,7 +206,7 @@ export default function Resellers() {
       await loadResellers();
       await loadActivity();
     } catch (err) {
-      setMessage(err.response?.data?.detail || "Update failed");
+      setMessage(formatApiError(err, "Update failed"));
     }
   };
 
