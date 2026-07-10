@@ -166,61 +166,117 @@ export default function Resellers() {
   };
 
   return (
-    <div>
-      <h2>Resellers</h2>
-      {message ? <div style={{ marginBottom: 12 }}>{message}</div> : null}
-      <form onSubmit={selectedReseller ? handleSave : handleCreate} style={{ background: "white", padding: 16, borderRadius: 8, marginBottom: 20 }}>
-        <h3>{selectedReseller ? "Edit reseller" : "Create reseller"}</h3>
-        <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Email" style={inputStyle} />
-        <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={selectedReseller ? "New password (leave blank to keep current)" : "Password"} style={inputStyle} />
-        <input type="number" value={form.points_balance} onChange={(e) => setForm({ ...form, points_balance: e.target.value })} placeholder="Points balance" style={inputStyle} />
-        <label style={{ display: "block", marginBottom: 10 }}>
-          <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} /> Active
-        </label>
-        <button type="submit">{selectedReseller ? "Save" : "Create"}</button>
-        {selectedReseller && <button type="button" onClick={handleCancelEdit} style={{ marginLeft: 10 }}>Cancel</button>}
-      </form>
+    <div style={pageStyle}>
+      <div style={headerStyle}>
+        <div>
+          <h2 style={{ margin: 0 }}>Resellers</h2>
+          <p style={subheadStyle}>Manage reseller accounts, points, activation status, and point pricing in one place.</p>
+        </div>
+      </div>
 
-      <div style={{ background: "white", padding: 16, borderRadius: 8 }}>
-        <h3>Reseller pricing</h3>
-        <form onSubmit={handleSavePricing} style={{ display: "grid", gap: 10, marginBottom: 20 }}>
-          <div style={{ fontWeight: 600 }}>Token costs</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
+      {message ? <div style={alertStyle}>{message}</div> : null}
+
+      <div style={cardStyle}>
+        <h3 style={sectionTitleStyle}>{selectedReseller ? "Edit reseller" : "Create reseller"}</h3>
+        <form onSubmit={selectedReseller ? handleSave : handleCreate}>
+          <div style={formGridStyle}>
+            <input
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="Email"
+              style={inputStyle}
+            />
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              placeholder={selectedReseller ? "New password (leave blank to keep current)" : "Password"}
+              style={inputStyle}
+            />
+            <input
+              type="number"
+              value={form.points_balance}
+              onChange={(e) => setForm({ ...form, points_balance: e.target.value })}
+              placeholder="Points balance"
+              style={inputStyle}
+            />
+          </div>
+
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 8, marginBottom: 14, fontWeight: 500 }}>
+            <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
+            Active
+          </label>
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button type="submit" style={primaryButtonStyle}>{selectedReseller ? "Save" : "Create"}</button>
+            {selectedReseller ? (
+              <button type="button" onClick={handleCancelEdit} style={mutedButtonStyle}>Cancel</button>
+            ) : null}
+          </div>
+        </form>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={sectionTitleStyle}>Reseller pricing</h3>
+        <form onSubmit={handleSavePricing} style={{ display: "grid", gap: 12 }}>
+          <div style={{ fontWeight: 600, color: "#0f172a" }}>Token costs (points)</div>
+          <div style={formGridStyle}>
             <input type="number" min="0" value={pricingForm.token_30} onChange={(e) => setPricingForm({ ...pricingForm, token_30: e.target.value })} placeholder="30 days" style={inputStyle} />
             <input type="number" min="0" value={pricingForm.token_90} onChange={(e) => setPricingForm({ ...pricingForm, token_90: e.target.value })} placeholder="90 days" style={inputStyle} />
             <input type="number" min="0" value={pricingForm.token_180} onChange={(e) => setPricingForm({ ...pricingForm, token_180: e.target.value })} placeholder="180 days" style={inputStyle} />
             <input type="number" min="0" value={pricingForm.token_365} onChange={(e) => setPricingForm({ ...pricingForm, token_365: e.target.value })} placeholder="365 days" style={inputStyle} />
           </div>
-          <div style={{ fontWeight: 600, marginTop: 6 }}>Proxy costs</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
+
+          <div style={{ fontWeight: 600, color: "#0f172a", marginTop: 4 }}>Proxy costs (points)</div>
+          <div style={formGridStyle}>
             <input type="number" min="0" value={pricingForm.proxy_1} onChange={(e) => setPricingForm({ ...pricingForm, proxy_1: e.target.value })} placeholder="1 month" style={inputStyle} />
             <input type="number" min="0" value={pricingForm.proxy_3} onChange={(e) => setPricingForm({ ...pricingForm, proxy_3: e.target.value })} placeholder="3 months" style={inputStyle} />
             <input type="number" min="0" value={pricingForm.proxy_6} onChange={(e) => setPricingForm({ ...pricingForm, proxy_6: e.target.value })} placeholder="6 months" style={inputStyle} />
             <input type="number" min="0" value={pricingForm.proxy_12} onChange={(e) => setPricingForm({ ...pricingForm, proxy_12: e.target.value })} placeholder="12 months" style={inputStyle} />
           </div>
+
           <div>
-            <button type="submit">Save pricing</button>
+            <button type="submit" style={primaryButtonStyle}>Save pricing</button>
           </div>
         </form>
+      </div>
 
-        <h3>Existing resellers</h3>
-        {resellers.map((reseller) => (
-          <div key={reseller.id} style={{ borderBottom: "1px solid #e2e8f0", padding: "10px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <strong>{reseller.email}</strong><br />
-              <span>Points: {reseller.points_balance} • {reseller.is_active ? "Active" : "Disabled"}</span>
+      <div style={cardStyle}>
+        <h3 style={sectionTitleStyle}>Existing resellers</h3>
+        <div style={{ display: "grid", gap: 10 }}>
+          {resellers.map((reseller) => (
+            <div key={reseller.id} style={resellerRowStyle}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 22, color: "#0f172a" }}>{reseller.email}</div>
+                <div style={{ color: "#475569", marginTop: 6 }}>
+                  Points: <strong>{reseller.points_balance}</strong> • {reseller.is_active ? "Active" : "Disabled"}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button onClick={() => handleEdit(reseller)} style={mutedButtonStyle}>Edit</button>
+                <button onClick={() => handleTopUp(reseller.id)} style={primaryButtonStyle}>Top up</button>
+                <button onClick={() => toggleActive(reseller)} style={mutedButtonStyle}>{reseller.is_active ? "Disable" : "Enable"}</button>
+                <button onClick={() => handleDelete(reseller.id)} style={dangerButtonStyle}>Delete</button>
+              </div>
             </div>
-            <div>
-              <button onClick={() => handleEdit(reseller)} style={{ marginRight: 8 }}>Edit</button>
-              <button onClick={() => handleTopUp(reseller.id)} style={{ marginRight: 8 }}>Top up</button>
-              <button onClick={() => toggleActive(reseller)} style={{ marginRight: 8 }}>{reseller.is_active ? "Disable" : "Enable"}</button>
-              <button onClick={() => handleDelete(reseller.id)} style={{ color: "red" }}>Delete</button>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-const inputStyle = { width: "100%", padding: "10px 12px", marginBottom: 10, border: "1px solid #cbd5e1", borderRadius: 8 };
+const pageStyle = { display: "grid", gap: 18 };
+const headerStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 };
+const subheadStyle = { color: "#64748b", marginTop: 6, marginBottom: 0 };
+const alertStyle = { padding: "10px 12px", borderRadius: 10, background: "#ecfeff", border: "1px solid #a5f3fc", color: "#155e75" };
+const cardStyle = { background: "white", borderRadius: 14, padding: 18, border: "1px solid #e2e8f0", boxShadow: "0 10px 24px rgba(15,23,42,0.06)" };
+const sectionTitleStyle = { marginTop: 0, marginBottom: 14, color: "#0f172a" };
+const formGridStyle = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 };
+const resellerRowStyle = { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: 14, borderRadius: 12, border: "1px solid #e2e8f0", background: "#f8fafc", flexWrap: "wrap" };
+const inputStyle = { width: "100%", padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: 10, fontSize: 14 };
+const buttonBase = { border: "none", borderRadius: 10, padding: "9px 14px", cursor: "pointer", fontWeight: 600 };
+const primaryButtonStyle = { ...buttonBase, background: "#2563eb", color: "white" };
+const mutedButtonStyle = { ...buttonBase, background: "#e2e8f0", color: "#0f172a" };
+const dangerButtonStyle = { ...buttonBase, background: "#fee2e2", color: "#b91c1c" };
