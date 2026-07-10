@@ -3,14 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import API, { ProxyAPI } from '../api/api';
 import { getSavedLang, getStrings, saveLang } from '../i18n';
 
-const POINT_COSTS = {
+const DEFAULT_POINT_COSTS = {
   30: 3,
   90: 8,
   180: 15,
   365: 26,
 };
 
-const PROXY_PLAN_COSTS = {
+const DEFAULT_PROXY_PLAN_COSTS = {
   1: 5,
   3: 13,
   6: 24,
@@ -94,6 +94,7 @@ export default function Dashboard() {
   const [selectedProxyLoading, setSelectedProxyLoading] = useState(false);
   const [renewPlans, setRenewPlans] = useState({});
   const [renewingUserId, setRenewingUserId] = useState(null);
+  const [pricing, setPricing] = useState({ token_costs: DEFAULT_POINT_COSTS, proxy_plan_costs: DEFAULT_PROXY_PLAN_COSTS });
 
   useEffect(() => {
     const resellerId = localStorage.getItem('reseller_id');
@@ -124,6 +125,11 @@ export default function Dashboard() {
       const nextPoints = Number(me.data.points_balance || 0);
       setPoints(nextPoints);
       localStorage.setItem('reseller_points', String(nextPoints));
+      const pricingRes = await API.get('/app/reseller/pricing');
+      setPricing({
+        token_costs: pricingRes?.data?.token_costs || DEFAULT_POINT_COSTS,
+        proxy_plan_costs: pricingRes?.data?.proxy_plan_costs || DEFAULT_PROXY_PLAN_COSTS,
+      });
       const hist = await API.get('/app/reseller/tokens/history');
       setHistory(hist.data || []);
       await loadProxyUsers();
@@ -216,7 +222,7 @@ export default function Dashboard() {
         plan_months: selectedPlan,
       });
 
-      const pointsCost = Number(res?.data?.points_cost || PROXY_PLAN_COSTS[selectedPlan] || 0);
+      const pointsCost = Number(res?.data?.points_cost || pricing.proxy_plan_costs?.[selectedPlan] || DEFAULT_PROXY_PLAN_COSTS[selectedPlan] || 0);
       setProxyMessage(strings.proxyRenewed(selectedPlan, pointsCost));
       await refreshPoints();
       await loadProxyUsers(proxyUserSearch);
@@ -254,9 +260,9 @@ export default function Dashboard() {
     }
   };
 
-  const pointCost = POINT_COSTS[duration] || 0;
+  const pointCost = Number(pricing.token_costs?.[duration] ?? DEFAULT_POINT_COSTS[duration] ?? 0);
   const totalCost = pointCost * Number(count);
-  const proxyCost = PROXY_PLAN_COSTS[Number(proxyForm.plan_months)] || 0;
+  const proxyCost = Number(pricing.proxy_plan_costs?.[Number(proxyForm.plan_months)] ?? DEFAULT_PROXY_PLAN_COSTS[Number(proxyForm.plan_months)] ?? 0);
   const canAffordProxy = points >= proxyCost;
 
   return (
@@ -322,10 +328,10 @@ export default function Dashboard() {
               <input type="text" value={proxyForm.whatsapp} onChange={(e) => setProxyForm({ ...proxyForm, whatsapp: e.target.value })} style={inputStyle} required />
               <label style={labelStyle}>{strings.proxyPlan}</label>
               <select value={proxyForm.plan_months} onChange={(e) => setProxyForm({ ...proxyForm, plan_months: Number(e.target.value) })} style={inputStyle}>
-                <option value={1}>{strings.proxyPlan1Month}</option>
-                <option value={3}>{strings.proxyPlan3Months}</option>
-                <option value={6}>{strings.proxyPlan6Months}</option>
-                <option value={12}>{strings.proxyPlan1Year}</option>
+                <option value={1}>{strings.proxyPlan1Month} ({Number(pricing.proxy_plan_costs?.[1] ?? DEFAULT_PROXY_PLAN_COSTS[1])} {strings.points})</option>
+                <option value={3}>{strings.proxyPlan3Months} ({Number(pricing.proxy_plan_costs?.[3] ?? DEFAULT_PROXY_PLAN_COSTS[3])} {strings.points})</option>
+                <option value={6}>{strings.proxyPlan6Months} ({Number(pricing.proxy_plan_costs?.[6] ?? DEFAULT_PROXY_PLAN_COSTS[6])} {strings.points})</option>
+                <option value={12}>{strings.proxyPlan1Year} ({Number(pricing.proxy_plan_costs?.[12] ?? DEFAULT_PROXY_PLAN_COSTS[12])} {strings.points})</option>
               </select>
               <div style={{ marginBottom: 16, color: '#334155' }}><strong>{strings.proxyCost}:</strong> {proxyCost} {strings.points}</div>
               <div style={{ marginBottom: 16, color: canAffordProxy ? '#166534' : '#b91c1c' }}><strong>{strings.pointsBalance}:</strong> {points} {strings.points}</div>
@@ -417,15 +423,15 @@ export default function Dashboard() {
                             onChange={(e) => setRenewPlans((prev) => ({ ...prev, [user.id]: Number(e.target.value) }))}
                             style={{ padding: '8px 10px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', minWidth: 120 }}
                           >
-                            <option value={1}>{strings.proxyPlan1Month}</option>
-                            <option value={3}>{strings.proxyPlan3Months}</option>
-                            <option value={6}>{strings.proxyPlan6Months}</option>
-                            <option value={12}>{strings.proxyPlan1Year}</option>
+                            <option value={1}>{strings.proxyPlan1Month} ({Number(pricing.proxy_plan_costs?.[1] ?? DEFAULT_PROXY_PLAN_COSTS[1])} {strings.points})</option>
+                            <option value={3}>{strings.proxyPlan3Months} ({Number(pricing.proxy_plan_costs?.[3] ?? DEFAULT_PROXY_PLAN_COSTS[3])} {strings.points})</option>
+                            <option value={6}>{strings.proxyPlan6Months} ({Number(pricing.proxy_plan_costs?.[6] ?? DEFAULT_PROXY_PLAN_COSTS[6])} {strings.points})</option>
+                            <option value={12}>{strings.proxyPlan1Year} ({Number(pricing.proxy_plan_costs?.[12] ?? DEFAULT_PROXY_PLAN_COSTS[12])} {strings.points})</option>
                           </select>
                           <button
                             type="button"
                             onClick={() => handleRenewProxyUser(user)}
-                            disabled={renewingUserId === user.id || points < (PROXY_PLAN_COSTS[Number(renewPlans[user.id] || 1)] || 0)}
+                            disabled={renewingUserId === user.id || points < Number(pricing.proxy_plan_costs?.[Number(renewPlans[user.id] || 1)] ?? DEFAULT_PROXY_PLAN_COSTS[Number(renewPlans[user.id] || 1)] ?? 0)}
                             style={{
                               padding: '8px 12px',
                               borderRadius: 10,
@@ -439,7 +445,7 @@ export default function Dashboard() {
                           </button>
                         </div>
                         <div style={{ fontSize: 12, color: '#475569' }}>
-                          {strings.proxyRenewCostLabel}: {PROXY_PLAN_COSTS[Number(renewPlans[user.id] || 1)] || 0} {strings.points}
+                          {strings.proxyRenewCostLabel}: {Number(pricing.proxy_plan_costs?.[Number(renewPlans[user.id] || 1)] ?? DEFAULT_PROXY_PLAN_COSTS[Number(renewPlans[user.id] || 1)] ?? 0)} {strings.points}
                         </div>
                       </div>
                     </div>

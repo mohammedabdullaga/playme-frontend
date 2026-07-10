@@ -36,6 +36,8 @@ export const adminCreateReseller = (data) => API.post(`/admin/resellers`, data);
 export const adminUpdateReseller = (id, data) => API.put(`/admin/resellers/${id}`, data);
 export const adminDeleteReseller = (id) => API.delete(`/admin/resellers/${id}`);
 export const adminTopUpReseller = (data) => API.post(`/admin/resellers/top-up`, data);
+export const adminGetResellerPricing = () => API.get(`/admin/resellers/pricing`);
+export const adminUpdateResellerPricing = (data) => API.put(`/admin/resellers/pricing`, data);
 
 // User/Account management endpoints
 export const adminGetAccounts = () => API.get(`/admin/accounts`);
