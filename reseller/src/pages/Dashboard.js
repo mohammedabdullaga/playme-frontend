@@ -18,7 +18,6 @@ const DEFAULT_PROXY_PLAN_COSTS = {
 };
 
 const LOW_POINTS_THRESHOLD = 100;
-const LOW_POINTS_ALERT_KEY = 'reseller_low_points_alerted';
 
 const labelStyle = {
   display: 'block',
@@ -100,6 +99,7 @@ export default function Dashboard() {
   const [pricing, setPricing] = useState({ token_costs: DEFAULT_POINT_COSTS, proxy_plan_costs: DEFAULT_PROXY_PLAN_COSTS });
   const [hasLoadedBalance, setHasLoadedBalance] = useState(false);
   const [showLowPointsModal, setShowLowPointsModal] = useState(false);
+  const [hasShownLowPointsModal, setHasShownLowPointsModal] = useState(false);
 
   useEffect(() => {
     const resellerId = localStorage.getItem('reseller_id');
@@ -111,22 +111,23 @@ export default function Dashboard() {
   }, [navigate]);
 
   useEffect(() => {
-    if (!hasLoadedBalance || typeof window === 'undefined') {
+    if (!hasLoadedBalance) {
       return;
     }
 
     if (points >= LOW_POINTS_THRESHOLD) {
-      sessionStorage.removeItem(LOW_POINTS_ALERT_KEY);
+      setShowLowPointsModal(false);
+      setHasShownLowPointsModal(false);
       return;
     }
 
-    if (sessionStorage.getItem(LOW_POINTS_ALERT_KEY) === '1') {
+    if (hasShownLowPointsModal) {
       return;
     }
 
-    sessionStorage.setItem(LOW_POINTS_ALERT_KEY, '1');
     setShowLowPointsModal(true);
-  }, [hasLoadedBalance, points, strings]);
+    setHasShownLowPointsModal(true);
+  }, [hasLoadedBalance, hasShownLowPointsModal, points]);
 
   const toggleLanguage = () => {
     const nextLang = lang === 'ar' ? 'en' : 'ar';
@@ -311,6 +312,28 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
+        {hasLoadedBalance && points < LOW_POINTS_THRESHOLD ? (
+          <div
+            style={{
+              position: 'fixed',
+              top: 88,
+              right: lang === 'ar' ? 'auto' : 24,
+              left: lang === 'ar' ? 24 : 'auto',
+              zIndex: 999,
+              maxWidth: 260,
+              background: '#b91c1c',
+              color: 'white',
+              borderRadius: 14,
+              padding: '10px 14px',
+              boxShadow: '0 14px 32px rgba(127, 29, 29, 0.34)',
+              fontSize: 13,
+              lineHeight: 1.5,
+            }}
+          >
+            {strings.lowPointsInlineReminder(points)}
+          </div>
+        ) : null}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20 }}>
           <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>

@@ -65,6 +65,7 @@ const strings = {
     lowPointsTitle: 'تذكير سريع',
     lowPointsAlert: (points) => `رصيد نقاطك الآن ${points}. فقط تذكير ودي بإعادة الشحن قريبًا حتى يبقى البيع مستمرًا بدون انقطاع.`,
     lowPointsAction: 'حسنًا',
+    lowPointsInlineReminder: (points) => `تذكير: رصيدك الحالي ${points} نقطة. يفضّل إعادة الشحن قريبًا.`,
   },
   en: {
     panelTitle: 'Reseller Panel',
@@ -129,6 +130,7 @@ const strings = {
     lowPointsTitle: 'Quick reminder',
     lowPointsAlert: (points) => `Your points balance is currently ${points}. Just a friendly reminder to recharge soon so sales continue smoothly.`,
     lowPointsAction: 'Got it',
+    lowPointsInlineReminder: (points) => `Reminder: your current balance is ${points} points. Recharge soon.`,
   },
 };
 
