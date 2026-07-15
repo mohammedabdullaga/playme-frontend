@@ -62,7 +62,9 @@ const strings = {
     proxyRenewed: (months, cost) => `تم تجديد الحساب لمدة ${months} شهر(أشهر) مقابل ${cost} نقطة`,
     loginFailed: 'فشل تسجيل الدخول',
     invalidCredentials: 'بيانات غير صحيحة',
-    lowPointsAlert: (points, threshold) => `رصيد النقاط منخفض (${points}). يرجى إعادة الشحن قريبًا حتى لا يتوقف البيع. الحد المطلوب ${threshold} نقطة على الأقل.`,
+    lowPointsTitle: 'تذكير سريع',
+    lowPointsAlert: (points) => `رصيد نقاطك الآن ${points}. فقط تذكير ودي بإعادة الشحن قريبًا حتى يبقى البيع مستمرًا بدون انقطاع.`,
+    lowPointsAction: 'حسنًا',
   },
   en: {
     panelTitle: 'Reseller Panel',
@@ -124,7 +126,9 @@ const strings = {
     proxyRenewed: (months, cost) => `Account renewed for ${months} month(s) at ${cost} points`,
     loginFailed: 'Login failed',
     invalidCredentials: 'Invalid credentials',
-    lowPointsAlert: (points, threshold) => `Your points balance is low (${points}). Recharge soon to avoid interrupting sales. Recommended minimum: ${threshold} points.`,
+    lowPointsTitle: 'Quick reminder',
+    lowPointsAlert: (points) => `Your points balance is currently ${points}. Just a friendly reminder to recharge soon so sales continue smoothly.`,
+    lowPointsAction: 'Got it',
   },
 };
 

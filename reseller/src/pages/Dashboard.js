@@ -99,6 +99,7 @@ export default function Dashboard() {
   const [renewingUserId, setRenewingUserId] = useState(null);
   const [pricing, setPricing] = useState({ token_costs: DEFAULT_POINT_COSTS, proxy_plan_costs: DEFAULT_PROXY_PLAN_COSTS });
   const [hasLoadedBalance, setHasLoadedBalance] = useState(false);
+  const [showLowPointsModal, setShowLowPointsModal] = useState(false);
 
   useEffect(() => {
     const resellerId = localStorage.getItem('reseller_id');
@@ -124,7 +125,7 @@ export default function Dashboard() {
     }
 
     sessionStorage.setItem(LOW_POINTS_ALERT_KEY, '1');
-    window.alert(strings.lowPointsAlert(points, LOW_POINTS_THRESHOLD));
+    setShowLowPointsModal(true);
   }, [hasLoadedBalance, points, strings]);
 
   const toggleLanguage = () => {
@@ -529,6 +530,56 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {showLowPointsModal ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: 420,
+              background: 'linear-gradient(180deg, #fff7ed 0%, #ffffff 100%)',
+              borderRadius: 20,
+              padding: 24,
+              boxShadow: '0 24px 60px rgba(15,23,42,0.22)',
+              border: '1px solid #fed7aa',
+            }}
+          >
+            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: 14, background: '#ffedd5', color: '#c2410c', fontSize: 26, marginBottom: 16 }}>
+              !
+            </div>
+            <h3 style={{ margin: '0 0 10px', color: '#9a3412', fontSize: 24 }}>{strings.lowPointsTitle}</h3>
+            <p style={{ margin: 0, color: '#7c2d12', lineHeight: 1.7 }}>{strings.lowPointsAlert(points)}</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+              <button
+                type="button"
+                onClick={() => setShowLowPointsModal(false)}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: '#ea580c',
+                  color: 'white',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {strings.lowPointsAction}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
