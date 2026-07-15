@@ -17,6 +17,9 @@ const DEFAULT_PROXY_PLAN_COSTS = {
   12: 38,
 };
 
+const LOW_POINTS_THRESHOLD = 100;
+const LOW_POINTS_ALERT_KEY = 'reseller_low_points_alerted';
+
 const labelStyle = {
   display: 'block',
   marginBottom: 6,
@@ -95,6 +98,7 @@ export default function Dashboard() {
   const [renewPlans, setRenewPlans] = useState({});
   const [renewingUserId, setRenewingUserId] = useState(null);
   const [pricing, setPricing] = useState({ token_costs: DEFAULT_POINT_COSTS, proxy_plan_costs: DEFAULT_PROXY_PLAN_COSTS });
+  const [hasLoadedBalance, setHasLoadedBalance] = useState(false);
 
   useEffect(() => {
     const resellerId = localStorage.getItem('reseller_id');
@@ -104,6 +108,24 @@ export default function Dashboard() {
     }
     loadData();
   }, [navigate]);
+
+  useEffect(() => {
+    if (!hasLoadedBalance || typeof window === 'undefined') {
+      return;
+    }
+
+    if (points >= LOW_POINTS_THRESHOLD) {
+      sessionStorage.removeItem(LOW_POINTS_ALERT_KEY);
+      return;
+    }
+
+    if (sessionStorage.getItem(LOW_POINTS_ALERT_KEY) === '1') {
+      return;
+    }
+
+    sessionStorage.setItem(LOW_POINTS_ALERT_KEY, '1');
+    window.alert(strings.lowPointsAlert(points, LOW_POINTS_THRESHOLD));
+  }, [hasLoadedBalance, points, strings]);
 
   const toggleLanguage = () => {
     const nextLang = lang === 'ar' ? 'en' : 'ar';
@@ -124,6 +146,7 @@ export default function Dashboard() {
       const me = await API.get('/app/reseller/me');
       const nextPoints = Number(me.data.points_balance || 0);
       setPoints(nextPoints);
+      setHasLoadedBalance(true);
       localStorage.setItem('reseller_points', String(nextPoints));
       const pricingRes = await API.get('/app/reseller/pricing');
       setPricing({
@@ -144,6 +167,7 @@ export default function Dashboard() {
       const me = await API.get('/app/reseller/me');
       const nextPoints = Number(me.data.points_balance || 0);
       setPoints(nextPoints);
+      setHasLoadedBalance(true);
       localStorage.setItem('reseller_points', String(nextPoints));
       return nextPoints;
     } catch (err) {
