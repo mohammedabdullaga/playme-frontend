@@ -303,37 +303,33 @@ export default function Dashboard() {
             <h1 style={{ margin: 0 }}>{strings.panelTitle}</h1>
             <p style={{ margin: '8px 0 0', color: '#475569' }}>{strings.pointsBalance}: <strong>{points}</strong></p>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button onClick={toggleLanguage} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: 'white', cursor: 'pointer' }}>
-              {strings.switchLanguage}
-            </button>
-            <button onClick={handleSignOut} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer' }}>
-              {strings.signOut}
-            </button>
+          <div style={{ display: 'grid', gap: 8, justifyItems: lang === 'ar' ? 'start' : 'end' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: lang === 'ar' ? 'flex-start' : 'flex-end' }}>
+              <button onClick={toggleLanguage} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: 'white', cursor: 'pointer' }}>
+                {strings.switchLanguage}
+              </button>
+              <button onClick={handleSignOut} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#dc2626', color: 'white', cursor: 'pointer' }}>
+                {strings.signOut}
+              </button>
+            </div>
+            {hasLoadedBalance && points < LOW_POINTS_THRESHOLD ? (
+              <div
+                style={{
+                  maxWidth: 260,
+                  background: '#b91c1c',
+                  color: 'white',
+                  borderRadius: 14,
+                  padding: '10px 14px',
+                  boxShadow: '0 14px 32px rgba(127, 29, 29, 0.22)',
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                }}
+              >
+                {strings.lowPointsInlineReminder(points)}
+              </div>
+            ) : null}
           </div>
         </div>
-
-        {hasLoadedBalance && points < LOW_POINTS_THRESHOLD ? (
-          <div
-            style={{
-              position: 'fixed',
-              top: 88,
-              right: lang === 'ar' ? 'auto' : 24,
-              left: lang === 'ar' ? 24 : 'auto',
-              zIndex: 999,
-              maxWidth: 260,
-              background: '#b91c1c',
-              color: 'white',
-              borderRadius: 14,
-              padding: '10px 14px',
-              boxShadow: '0 14px 32px rgba(127, 29, 29, 0.34)',
-              fontSize: 13,
-              lineHeight: 1.5,
-            }}
-          >
-            {strings.lowPointsInlineReminder(points)}
-          </div>
-        ) : null}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20 }}>
           <div style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
