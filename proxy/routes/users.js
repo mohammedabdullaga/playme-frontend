@@ -47,6 +47,43 @@ router.get('/', (req, res) => {
   return res.json(users);
 });
 
+router.post('/repair-dns', async (req, res, next) => {
+  try {
+    const activeUsers = db.prepare(`
+      SELECT u.id, u.subdomain, u.proxy_id, p.ip AS proxy_ip
+      FROM users u
+      LEFT JOIN proxies p ON p.id = u.proxy_id
+      WHERE u.status = ?
+      ORDER BY u.id ASC
+    `).all('active');
+
+    const repaired = [];
+    const skipped = [];
+
+    for (const user of activeUsers) {
+      if (!user.proxy_ip) {
+        skipped.push({ id: user.id, reason: 'Proxy not found' });
+        continue;
+      }
+
+      const recordId = await createRecord(user.subdomain, user.proxy_ip);
+      db.prepare('UPDATE users SET cf_record_id = ? WHERE id = ?').run(recordId, user.id);
+      repaired.push({ id: user.id, subdomain: user.subdomain, record_id: recordId });
+    }
+
+    return res.json({
+      success: true,
+      active_count: activeUsers.length,
+      repaired_count: repaired.length,
+      skipped_count: skipped.length,
+      repaired,
+      skipped,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.post('/', async (req, res, next) => {
   try {
     const { proxy_id, whatsapp, expires_at } = req.body || {};

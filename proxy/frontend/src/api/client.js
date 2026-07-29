@@ -75,6 +75,10 @@ export function getUsers(token) {
   return request('/api/users', { token });
 }
 
+export function repairActiveSubdomains(token) {
+  return request('/api/users/repair-dns', { method: 'POST', token });
+}
+
 export function createUser(payload, token) {
   return request('/api/users', { method: 'POST', body: payload, token });
 }

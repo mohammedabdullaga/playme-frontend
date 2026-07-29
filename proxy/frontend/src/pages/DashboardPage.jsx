@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { createProxy, createResellerUser, deleteProxy, getAuditLogs, getProxies, getResellerUserConfig, getResellerUsers, updateProxy } from '../api/client';
+import { createProxy, createResellerUser, deleteProxy, getAuditLogs, getProxies, getResellerUserConfig, getResellerUsers, repairActiveSubdomains, updateProxy } from '../api/client';
 
 export default function DashboardPage() {
   const { token, user, signOut } = useAuth();
@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const [resellerForm, setResellerForm] = useState({ whatsapp: '', expires_at: '' });
   const [resellerSearch, setResellerSearch] = useState('');
   const [resellerConfig, setResellerConfig] = useState(null);
+  const [dnsRepairMessage, setDnsRepairMessage] = useState('');
 
   async function loadProxies() {
     try {
@@ -124,6 +125,18 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleRepairActiveSubdomains() {
+    if (!window.confirm('Recreate DNS records for all active subdomains?')) return;
+
+    try {
+      setDnsRepairMessage('');
+      const result = await repairActiveSubdomains(token);
+      setDnsRepairMessage(`Recreated ${result.repaired_count || 0} active subdomains${result.skipped_count ? `, skipped ${result.skipped_count}` : ''}.`);
+    } catch (err) {
+      setError(err.message || 'Failed to recreate active subdomains');
+    }
+  }
+
   const capacityLabel = useMemo(() => (proxy) => `${proxy.active_user_count ?? 0}/${proxy.max_users ?? 3}`, []);
 
   return (
@@ -134,7 +147,10 @@ export default function DashboardPage() {
             <p className="text-sm uppercase tracking-[0.3em] text-cyan-400">{isReseller ? 'Reseller Portal' : 'Proxy Management'}</p>
             <h1 className="text-3xl font-semibold">{isReseller ? 'Proxy Reselling' : 'Proxies'}</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
+            {!isReseller ? (
+              <button className="rounded-lg border border-slate-700 px-4 py-2" onClick={handleRepairActiveSubdomains}>Recreate Active Subdomains</button>
+            ) : null}
             {!isReseller ? (
               <button className="rounded-lg border border-slate-700 px-4 py-2" onClick={() => { setEditingProxy(null); setForm({ label: '', ip: '', port: '', protocol: 'http', username: '', password: '', region: '', max_users: '3', status: 'active' }); setShowModal(true); }}>Add Proxy</button>
             ) : null}
@@ -143,6 +159,7 @@ export default function DashboardPage() {
         </div>
 
         {error ? <div className="mb-4 rounded-lg border border-rose-500/30 bg-rose-950/40 p-3 text-sm text-rose-300">{error}</div> : null}
+        {dnsRepairMessage ? <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-950/40 p-3 text-sm text-emerald-300">{dnsRepairMessage}</div> : null}
 
         {isReseller ? (
           <div className="space-y-6">
