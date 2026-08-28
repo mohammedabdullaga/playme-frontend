@@ -96,6 +96,7 @@ export default function Navbar() {
           <NavLink className={getLinkClass} to="/devices">Devices</NavLink>
           <NavLink className={getLinkClass} to="/users">Users</NavLink>
           <NavLink className={getLinkClass} to="/tokens">Tokens</NavLink>
+          <NavLink className={getLinkClass} to="/manage-token">Manage Token</NavLink>
           <NavLink className={getLinkClass} to="/activate">Activate Device</NavLink>
           <NavLink className={getLinkClass} to="/proxy">Proxy</NavLink>
           <NavLink className={getLinkClass} to="/reseller-panel">Reseller Panel</NavLink>
