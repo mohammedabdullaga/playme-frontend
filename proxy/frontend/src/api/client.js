@@ -71,8 +71,13 @@ export function deleteProxy(id, token) {
   return request(`/api/proxies/${id}`, { method: 'DELETE', token });
 }
 
-export function getUsers(token) {
-  return request('/api/users', { token });
+export function getUsers(token, search = '') {
+  const query = search ? `?search=${encodeURIComponent(search)}` : '';
+  return request(`/api/users${query}`, { token });
+}
+
+export function updateUser(id, payload, token) {
+  return request(`/api/users/${id}`, { method: 'PUT', body: payload, token });
 }
 
 export function repairActiveSubdomains(token) {

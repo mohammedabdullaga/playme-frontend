@@ -39,14 +39,21 @@ function generateSubdomain() {
 }
 
 router.get('/', (req, res) => {
-  const users = db.prepare(`
+  const search = String(req.query.search || '').trim();
+  let query = `
     SELECT u.*, d.domain AS assigned_domain, r.username AS reseller_username, p.label AS proxy_label, p.ip AS proxy_ip, p.port AS proxy_port, p.protocol AS proxy_protocol
     FROM users u
     LEFT JOIN proxy_domains d ON d.id = u.domain_id
     LEFT JOIN admins r ON r.id = u.reseller_id
     LEFT JOIN proxies p ON p.id = u.proxy_id
-    ORDER BY u.id DESC
-  `).all();
+  `;
+  const params = [];
+  if (search) {
+    query += ' WHERE u.subdomain LIKE ? OR u.whatsapp LIKE ?';
+    params.push(`%${search}%`, `%${search}%`);
+  }
+  query += ' ORDER BY u.id DESC';
+  const users = db.prepare(query).all(...params);
   return res.json(users);
 });
 
@@ -124,6 +131,25 @@ router.post('/', async (req, res, next) => {
     return res.status(201).json(responsePayload);
   } catch (error) {
     next(error);
+  }
+});
+
+router.put('/:id', async (req, res, next) => {
+  try {
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const whatsapp = req.body?.whatsapp !== undefined ? String(req.body.whatsapp).trim() : user.whatsapp;
+    const expiresAt = req.body?.expires_at !== undefined ? String(req.body.expires_at).trim() : user.expires_at;
+    if (!whatsapp || !expiresAt) {
+      return res.status(400).json({ error: 'whatsapp and expires_at are required' });
+    }
+
+    db.prepare('UPDATE users SET whatsapp = ?, expires_at = ? WHERE id = ?').run(whatsapp, expiresAt, user.id);
+    const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+    return res.json(updated);
+  } catch (error) {
+    return next(error);
   }
 });
 

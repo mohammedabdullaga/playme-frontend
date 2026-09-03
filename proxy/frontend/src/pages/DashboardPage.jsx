@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { cleanupOrphanDnsRecords, createDomain, createProxy, createResellerUser, deleteProxy, getAuditLogs, getDomains, getProxies, getResellerUserConfig, getResellerUsers, getUsers, repairActiveSubdomains, setDefaultDomain, updateProxy } from '../api/client';
+import { cleanupOrphanDnsRecords, createDomain, createProxy, createResellerUser, deleteProxy, deleteUser, disableUser, getAuditLogs, getDomains, getProxies, getResellerUserConfig, getResellerUsers, getUsers, reactivateUser, repairActiveSubdomains, setDefaultDomain, updateProxy, updateUser } from '../api/client';
 
 const SOON_EXPIRY_DAYS = 7;
 
@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [domainMessage, setDomainMessage] = useState('');
   const [proxyFilter, setProxyFilter] = useState('all');
   const [accountFilter, setAccountFilter] = useState('all');
+  const [userSearch, setUserSearch] = useState('');
 
   async function loadProxies() {
     try {
@@ -78,9 +79,9 @@ export default function DashboardPage() {
     }
   }
 
-  async function loadUsers() {
+  async function loadUsers(search = userSearch) {
     try {
-      setUsers(await getUsers(token));
+      setUsers(await getUsers(token, search));
     } catch (err) {
       setError(err.message || 'Failed to load accounts');
     }
@@ -210,15 +211,66 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleSearchUsers(e) {
+    e.preventDefault();
+    await loadUsers(userSearch);
+  }
+
+  async function handleEditUser(userEntry) {
+    const whatsapp = window.prompt('WhatsApp / account name', userEntry.whatsapp);
+    if (whatsapp === null) return;
+    const expiresAt = window.prompt('Expiry date/time (ISO format)', userEntry.expires_at);
+    if (expiresAt === null) return;
+
+    try {
+      await updateUser(userEntry.id, { whatsapp, expires_at: expiresAt }, token);
+      await Promise.all([loadUsers(), loadProxies()]);
+    } catch (err) {
+      setError(err.message || 'Failed to update account');
+    }
+  }
+
+  async function handleExtendUser(userEntry) {
+    const expiresAt = window.prompt('New expiry date/time (ISO format)', userEntry.expires_at);
+    if (expiresAt === null) return;
+
+    try {
+      await reactivateUser(userEntry.id, expiresAt, token);
+      await Promise.all([loadUsers(), loadProxies()]);
+    } catch (err) {
+      setError(err.message || 'Failed to extend account');
+    }
+  }
+
+  async function handleDisableUser(userEntry) {
+    if (!window.confirm(`Disable ${userEntry.subdomain}?`)) return;
+    try {
+      await disableUser(userEntry.id, token);
+      await Promise.all([loadUsers(), loadProxies()]);
+    } catch (err) {
+      setError(err.message || 'Failed to disable account');
+    }
+  }
+
+  async function handleDeleteUser(userEntry) {
+    if (!window.confirm(`Delete ${userEntry.subdomain} permanently?`)) return;
+    try {
+      await deleteUser(userEntry.id, token);
+      await Promise.all([loadUsers(), loadProxies()]);
+    } catch (err) {
+      setError(err.message || 'Failed to delete account');
+    }
+  }
+
   const capacityLabel = useMemo(() => (proxy) => `${proxy.active_user_count ?? 0}/${proxy.max_users ?? 3}`, []);
 
   const activeUsers = useMemo(() => users.filter((userEntry) => userEntry.status === 'active'), [users]);
   const soonUsers = useMemo(() => activeUsers.filter((userEntry) => isExpiringSoon(userEntry.expires_at)), [activeUsers]);
-  const filteredUsers = useMemo(() => activeUsers.filter((userEntry) => {
-    if (accountFilter === 'soon') return isExpiringSoon(userEntry.expires_at);
-    if (accountFilter === 'far') return !isExpiringSoon(userEntry.expires_at) && !isExpired(userEntry.expires_at);
+  const filteredUsers = useMemo(() => users.filter((userEntry) => {
+    if (accountFilter === 'soon') return userEntry.status === 'active' && isExpiringSoon(userEntry.expires_at);
+    if (accountFilter === 'far') return userEntry.status === 'active' && !isExpiringSoon(userEntry.expires_at) && !isExpired(userEntry.expires_at);
     return true;
-  }), [accountFilter, activeUsers]);
+  }), [accountFilter, users]);
   const filteredProxies = useMemo(() => proxies.filter((proxy) => {
     const proxyUsers = activeUsers.filter((userEntry) => String(userEntry.proxy_id) === String(proxy.id));
     if (proxyFilter === 'soon') return proxyUsers.some((userEntry) => isExpiringSoon(userEntry.expires_at));
@@ -365,6 +417,10 @@ export default function DashboardPage() {
                 </label>
                 <p className="text-sm text-slate-400">Soon means an active account expiring within the next {SOON_EXPIRY_DAYS} days.</p>
               </div>
+              <form className="mt-4 flex flex-wrap gap-2" onSubmit={handleSearchUsers}>
+                <input className="min-w-[260px] flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Search WhatsApp or subdomain" />
+                <button className="rounded-lg bg-cyan-500 px-4 py-2 font-medium text-slate-950" type="submit">Search accounts</button>
+              </form>
             </div>
             {loading ? <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-8 text-center text-slate-400">Loading proxies…</div> : (
               <>
@@ -410,7 +466,13 @@ export default function DashboardPage() {
                       const soon = isExpiringSoon(userEntry.expires_at);
                       return <div key={userEntry.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
                         <div><p className="font-medium text-white">{userEntry.whatsapp}</p><p className="text-sm text-slate-400">{userEntry.subdomain} • {proxy?.label || 'Unknown proxy'}</p></div>
-                        <span className={`rounded-full px-3 py-1 text-xs ${soon ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>{soon ? 'Soon to expire' : `Expires ${userEntry.expires_at}`}</span>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <span className={`rounded-full px-3 py-1 text-xs ${userEntry.status !== 'active' ? 'bg-slate-700/70 text-slate-300' : soon ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>{userEntry.status !== 'active' ? userEntry.status : soon ? 'Soon to expire' : `Expires ${userEntry.expires_at}`}</span>
+                          <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200" onClick={() => handleEditUser(userEntry)}>Edit</button>
+                          <button className="rounded-lg border border-cyan-500/40 px-3 py-2 text-xs text-cyan-300" onClick={() => handleExtendUser(userEntry)}>Extend</button>
+                          {userEntry.status === 'active' ? <button className="rounded-lg border border-amber-500/40 px-3 py-2 text-xs text-amber-300" onClick={() => handleDisableUser(userEntry)}>Disable</button> : null}
+                          <button className="rounded-lg border border-rose-500/40 px-3 py-2 text-xs text-rose-300" onClick={() => handleDeleteUser(userEntry)}>Delete</button>
+                        </div>
                       </div>;
                     })}
                     {filteredUsers.length === 0 ? <p className="text-sm text-slate-400">No accounts match this filter.</p> : null}
