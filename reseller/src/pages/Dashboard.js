@@ -301,7 +301,12 @@ export default function Dashboard() {
   const totalCost = pointCost * Number(count);
   const proxyCost = Number(pricing.proxy_plan_costs?.[Number(proxyForm.plan_months)] ?? DEFAULT_PROXY_PLAN_COSTS[Number(proxyForm.plan_months)] ?? 0);
   const canAffordProxy = points >= proxyCost;
-  const renewalReminderUsers = proxyUsers.filter((user) => isExpiringSoon(user.expires_at) || isExpired(user.expires_at));
+  const urgentRenewalUsers = proxyUsers.filter((user) => isExpiringSoon(user.expires_at) || isExpired(user.expires_at));
+  const nextUpcomingUser = proxyUsers
+    .filter((user) => !isExpired(user.expires_at))
+    .sort((first, second) => new Date(first.expires_at).getTime() - new Date(second.expires_at).getTime())[0];
+  const renewalReminderUsers = urgentRenewalUsers.length > 0 ? urgentRenewalUsers : nextUpcomingUser ? [nextUpcomingUser] : [];
+  const showingUpcomingPreview = urgentRenewalUsers.length === 0 && renewalReminderUsers.length > 0;
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', padding: 16, direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
@@ -429,10 +434,10 @@ export default function Dashboard() {
           <div style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffffff 100%)', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)', border: '1px solid #fed7aa' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
               <div>
-                <h3 style={{ margin: 0, color: '#9a3412' }}>{strings.expiringSoonTitle}</h3>
-                <p style={{ margin: '6px 0 0', color: '#7c2d12' }}>{strings.expiringSoonSubtitle(SOON_EXPIRY_DAYS)}</p>
+                <h3 style={{ margin: 0, color: '#9a3412' }}>{showingUpcomingPreview ? strings.nextExpiryTitle : strings.expiringSoonTitle}</h3>
+                <p style={{ margin: '6px 0 0', color: '#7c2d12' }}>{showingUpcomingPreview ? strings.nextExpirySubtitle : strings.expiringSoonSubtitle(SOON_EXPIRY_DAYS)}</p>
               </div>
-              <span style={{ background: '#ffedd5', color: '#c2410c', borderRadius: 999, padding: '7px 11px', fontSize: 13, fontWeight: 700 }}>{renewalReminderUsers.length} {strings.expiringSoonCount}</span>
+              <span style={{ background: '#ffedd5', color: '#c2410c', borderRadius: 999, padding: '7px 11px', fontSize: 13, fontWeight: 700 }}>{renewalReminderUsers.length} {showingUpcomingPreview ? strings.nextExpiryCount : strings.expiringSoonCount}</span>
             </div>
             {renewalReminderUsers.length === 0 ? (
               <p style={{ margin: '18px 0 0', color: '#64748b' }}>{strings.noExpiringSoon}</p>
@@ -441,7 +446,7 @@ export default function Dashboard() {
                 {renewalReminderUsers.map((user) => (
                   <div key={`proxy-${user.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 14px', borderRadius: 12, background: '#ffffff', border: '1px solid #fed7aa' }}>
                     <div><strong style={{ color: '#0f172a' }}>{user.whatsapp}</strong><div style={{ marginTop: 4, color: '#64748b', fontSize: 13 }}>{user.subdomain} • {strings.proxySectionTitle}</div></div>
-                    <span style={{ background: isExpired(user.expires_at) ? '#fee2e2' : '#ffedd5', color: isExpired(user.expires_at) ? '#b91c1c' : '#c2410c', borderRadius: 999, padding: '5px 9px', fontSize: 12, fontWeight: 700 }}>{isExpired(user.expires_at) ? strings.expiredAccount : strings.expiringAccount}</span>
+                    <span style={{ background: isExpired(user.expires_at) ? '#fee2e2' : showingUpcomingPreview ? '#e0f2fe' : '#ffedd5', color: isExpired(user.expires_at) ? '#b91c1c' : showingUpcomingPreview ? '#0369a1' : '#c2410c', borderRadius: 999, padding: '5px 9px', fontSize: 12, fontWeight: 700 }}>{isExpired(user.expires_at) ? strings.expiredAccount : showingUpcomingPreview ? strings.nextExpiryAccount : strings.expiringAccount}</span>
                     <span style={{ color: '#c2410c', fontSize: 13 }}>{user.expires_at}</span>
                   </div>
                 ))}

@@ -72,6 +72,10 @@ const strings = {
     noExpiringSoon: 'لا توجد حسابات بروكسي قريبة الانتهاء أو منتهية.',
     expiringAccount: 'قريب الانتهاء',
     expiredAccount: 'منتهي',
+    nextExpiryTitle: 'موعد الانتهاء القادم',
+    nextExpirySubtitle: 'لا توجد حسابات قريبة الانتهاء. هذا هو الحساب الأقرب لانتهاء الصلاحية.',
+    nextExpiryCount: 'قادم',
+    nextExpiryAccount: 'القادم',
   },
   en: {
     panelTitle: 'Reseller Panel',
@@ -143,6 +147,10 @@ const strings = {
     noExpiringSoon: 'No proxy accounts are expiring soon or already expired.',
     expiringAccount: 'Expiring soon',
     expiredAccount: 'Expired',
+    nextExpiryTitle: 'Next upcoming expiry',
+    nextExpirySubtitle: 'Nothing is expiring soon. This is the account with the nearest upcoming expiry.',
+    nextExpiryCount: 'upcoming',
+    nextExpiryAccount: 'Next upcoming',
   },
 };
 
