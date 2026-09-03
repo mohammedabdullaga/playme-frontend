@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { createDomain, createProxy, createResellerUser, deleteProxy, getAuditLogs, getDomains, getProxies, getResellerUserConfig, getResellerUsers, repairActiveSubdomains, setDefaultDomain, updateProxy } from '../api/client';
+import { cleanupOrphanDnsRecords, createDomain, createProxy, createResellerUser, deleteProxy, getAuditLogs, getDomains, getProxies, getResellerUserConfig, getResellerUsers, repairActiveSubdomains, setDefaultDomain, updateProxy } from '../api/client';
 
 export default function DashboardPage() {
   const { token, user, signOut } = useAuth();
@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const [resellerSearch, setResellerSearch] = useState('');
   const [resellerConfig, setResellerConfig] = useState(null);
   const [dnsRepairMessage, setDnsRepairMessage] = useState('');
+  const [dnsCleanupMessage, setDnsCleanupMessage] = useState('');
   const [domains, setDomains] = useState([]);
   const [domainForm, setDomainForm] = useState({ domain: '', zone_id: '', api_token: '', api_key: '', api_email: '' });
   const [domainMessage, setDomainMessage] = useState('');
@@ -171,6 +172,18 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleCleanupOrphanDns() {
+    if (!window.confirm('Delete orphaned generated DNS records that no longer belong to an account?')) return;
+
+    try {
+      setDnsCleanupMessage('');
+      const result = await cleanupOrphanDnsRecords(token);
+      setDnsCleanupMessage(`Removed ${result.removed_count || 0} orphaned DNS records${result.skipped_count ? `, skipped ${result.skipped_count}` : ''}.`);
+    } catch (err) {
+      setError(err.message || 'Failed to clean orphaned DNS records');
+    }
+  }
+
   const capacityLabel = useMemo(() => (proxy) => `${proxy.active_user_count ?? 0}/${proxy.max_users ?? 3}`, []);
 
   return (
@@ -186,6 +199,9 @@ export default function DashboardPage() {
               <button className="rounded-lg border border-slate-700 px-4 py-2" onClick={handleRepairActiveSubdomains}>Recreate Active Subdomains</button>
             ) : null}
             {!isReseller ? (
+              <button className="rounded-lg border border-rose-500/40 px-4 py-2 text-rose-300" onClick={handleCleanupOrphanDns}>Clean Orphaned DNS</button>
+            ) : null}
+            {!isReseller ? (
               <button className="rounded-lg border border-slate-700 px-4 py-2" onClick={() => { setEditingProxy(null); setForm({ label: '', ip: '', port: '', protocol: 'http', username: '', password: '', region: '', max_users: '3', status: 'active' }); setShowModal(true); }}>Add Proxy</button>
             ) : null}
             <button className="rounded-lg bg-rose-500 px-4 py-2" onClick={signOut}>Logout</button>
@@ -194,6 +210,7 @@ export default function DashboardPage() {
 
         {error ? <div className="mb-4 rounded-lg border border-rose-500/30 bg-rose-950/40 p-3 text-sm text-rose-300">{error}</div> : null}
         {dnsRepairMessage ? <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-950/40 p-3 text-sm text-emerald-300">{dnsRepairMessage}</div> : null}
+        {dnsCleanupMessage ? <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-950/40 p-3 text-sm text-emerald-300">{dnsCleanupMessage}</div> : null}
         {!isReseller ? (
           <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
             <div className="mb-4">

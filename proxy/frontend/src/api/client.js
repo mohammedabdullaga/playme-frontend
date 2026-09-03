@@ -79,6 +79,10 @@ export function repairActiveSubdomains(token) {
   return request('/api/users/repair-dns', { method: 'POST', token });
 }
 
+export function cleanupOrphanDnsRecords(token) {
+  return request('/api/dns/cleanup-orphans', { method: 'POST', token });
+}
+
 export function getDomains(token) {
   return request('/api/domains', { token });
 }

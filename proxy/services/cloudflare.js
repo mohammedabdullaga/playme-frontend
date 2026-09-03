@@ -168,8 +168,44 @@ async function findRecordId(subdomain, domainConfig) {
   }
 }
 
+async function listRecords(domainConfig) {
+  const { cfApiToken, cfApiKey, cfApiEmail, cfZoneId } = resolveConfig(domainConfig);
+  if ((!cfApiToken && (!cfApiKey || !cfApiEmail)) || !cfZoneId) {
+    return [];
+  }
+
+  const headers = {};
+  if (cfApiToken) {
+    headers.Authorization = `Bearer ${cfApiToken}`;
+  } else {
+    headers['X-Auth-Key'] = cfApiKey;
+    headers['X-Auth-Email'] = cfApiEmail;
+  }
+
+  const records = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const response = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/dns_records?type=A&per_page=100&page=${page}`, {
+      method: 'GET',
+      headers,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = data?.errors?.[0]?.message || 'Cloudflare list records failed';
+      throw new Error(message);
+    }
+    records.push(...(data.result || []));
+    totalPages = data.result_info?.total_pages || page;
+    page += 1;
+  } while (page <= totalPages);
+
+  return records;
+}
+
 module.exports = {
   createRecord,
   deleteRecord,
   findRecordId,
+  listRecords,
 };
