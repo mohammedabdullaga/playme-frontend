@@ -2,6 +2,7 @@ const express = require('express');
 const { db } = require('../db/connection');
 const { createRecord } = require('../services/cloudflare');
 const { baseDomain } = require('../services/config');
+const { getDefaultDomain, getDomainById } = require('../services/domains');
 const { requireRole } = require('./auth');
 
 const router = express.Router();
@@ -11,7 +12,8 @@ const MAIN_BACKEND_URL = process.env.MAIN_BACKEND_URL || 'https://api.playmetod.
 const MIRROR_RESELLER_PASSWORD_HASH = '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi9wLw0A8J4V8N.Ce5Gk4f4zQh4w2i6';
 
 function buildResellerConfig(user, proxy) {
-  const server = `${user.subdomain}.${baseDomain}`;
+  const domain = user.domain_id ? getDomainById(user.domain_id) : null;
+  const server = `${user.subdomain}.${domain?.domain || baseDomain}`;
   const appletvUrl = `socks://${proxy.username}:${proxy.password}@${server}:${proxy.port}`;
 
   return {
@@ -136,11 +138,12 @@ router.post('/users', async (req, res, next) => {
         attempts += 1;
       }
 
-      const recordId = await createRecord(subdomain, proxy.ip);
+      const domain = getDefaultDomain();
+      const recordId = await createRecord(subdomain, proxy.ip, domain);
       const result = db.prepare(`
-        INSERT INTO users (proxy_id, reseller_id, whatsapp, subdomain, cf_record_id, expires_at, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(proxy.id, resellerId, whatsapp, subdomain, recordId, expiresAt, 'active');
+        INSERT INTO users (proxy_id, reseller_id, whatsapp, subdomain, domain_id, cf_record_id, expires_at, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(proxy.id, resellerId, whatsapp, subdomain, domain?.id || null, recordId, expiresAt, 'active');
 
       const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
       db.prepare('INSERT INTO audit_logs (reseller_id, user_id, proxy_id, action) VALUES (?, ?, ?, ?)').run(resellerId, user.id, proxy.id, 'create');
@@ -194,7 +197,7 @@ router.post('/users/:id/renew', async (req, res, next) => {
     try {
       let recordId = user.cf_record_id;
       if (!recordId) {
-        recordId = await createRecord(user.subdomain, proxy.ip);
+        recordId = await createRecord(user.subdomain, proxy.ip, getDomainById(user.domain_id));
       }
 
       db.prepare('UPDATE users SET expires_at = ?, status = ?, cf_record_id = ? WHERE id = ?')

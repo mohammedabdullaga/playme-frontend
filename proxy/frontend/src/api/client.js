@@ -79,6 +79,18 @@ export function repairActiveSubdomains(token) {
   return request('/api/users/repair-dns', { method: 'POST', token });
 }
 
+export function getDomains(token) {
+  return request('/api/domains', { token });
+}
+
+export function createDomain(payload, token) {
+  return request('/api/domains', { method: 'POST', body: payload, token });
+}
+
+export function setDefaultDomain(id, token) {
+  return request(`/api/domains/${id}/default`, { method: 'POST', token });
+}
+
 export function createUser(payload, token) {
   return request('/api/users', { method: 'POST', body: payload, token });
 }

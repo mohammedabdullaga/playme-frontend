@@ -21,10 +21,22 @@ CREATE TABLE IF NOT EXISTS proxies (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS proxy_domains (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  domain TEXT NOT NULL UNIQUE,
+  zone_id TEXT NOT NULL,
+  api_token TEXT,
+  api_key TEXT,
+  api_email TEXT,
+  is_default INTEGER NOT NULL DEFAULT 0 CHECK (is_default IN (0, 1)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   proxy_id INTEGER NOT NULL REFERENCES proxies(id),
   reseller_id INTEGER REFERENCES admins(id),
+  domain_id INTEGER REFERENCES proxy_domains(id),
   whatsapp TEXT NOT NULL,
   subdomain TEXT NOT NULL UNIQUE,
   cf_record_id TEXT,

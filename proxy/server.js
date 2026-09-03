@@ -7,6 +7,7 @@ const proxiesRouter = require('./routes/proxies');
 const usersRouter = require('./routes/users');
 const resellerRouter = require('./routes/reseller');
 const auditRouter = require('./routes/audit');
+const domainsRouter = require('./routes/domains');
 const { startExpiryCron } = require('./services/cron');
 
 dotenv.config();
@@ -37,6 +38,7 @@ app.use('/api', (req, res, next) => {
 app.use('/api/auth', authRouter);
 app.use('/api/proxies', proxiesRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/domains', domainsRouter);
 app.use('/api/reseller', resellerRouter);
 app.use('/api/audit', auditRouter);
 

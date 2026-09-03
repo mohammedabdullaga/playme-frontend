@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { createProxy, createResellerUser, deleteProxy, getAuditLogs, getProxies, getResellerUserConfig, getResellerUsers, repairActiveSubdomains, updateProxy } from '../api/client';
+import { createDomain, createProxy, createResellerUser, deleteProxy, getAuditLogs, getDomains, getProxies, getResellerUserConfig, getResellerUsers, repairActiveSubdomains, setDefaultDomain, updateProxy } from '../api/client';
 
 export default function DashboardPage() {
   const { token, user, signOut } = useAuth();
@@ -20,6 +20,9 @@ export default function DashboardPage() {
   const [resellerSearch, setResellerSearch] = useState('');
   const [resellerConfig, setResellerConfig] = useState(null);
   const [dnsRepairMessage, setDnsRepairMessage] = useState('');
+  const [domains, setDomains] = useState([]);
+  const [domainForm, setDomainForm] = useState({ domain: '', zone_id: '', api_token: '', api_key: '', api_email: '' });
+  const [domainMessage, setDomainMessage] = useState('');
 
   async function loadProxies() {
     try {
@@ -57,6 +60,14 @@ export default function DashboardPage() {
     }
   }
 
+  async function loadDomains() {
+    try {
+      setDomains(await getDomains(token));
+    } catch (err) {
+      setError(err.message || 'Failed to load domains');
+    }
+  }
+
   useEffect(() => {
     if (!token) return;
 
@@ -67,7 +78,30 @@ export default function DashboardPage() {
 
     loadProxies();
     loadAuditLogs();
+    loadDomains();
   }, [token, isReseller]);
+
+  async function handleCreateDomain(e) {
+    e.preventDefault();
+    try {
+      await createDomain(domainForm, token);
+      setDomainForm({ domain: '', zone_id: '', api_token: '', api_key: '', api_email: '' });
+      setDomainMessage('Domain added successfully.');
+      await loadDomains();
+    } catch (err) {
+      setDomainMessage(err.message || 'Failed to add domain');
+    }
+  }
+
+  async function handleSetDefaultDomain(id) {
+    try {
+      await setDefaultDomain(id, token);
+      setDomainMessage('Default reseller domain updated.');
+      await loadDomains();
+    } catch (err) {
+      setDomainMessage(err.message || 'Failed to update default domain');
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -160,6 +194,34 @@ export default function DashboardPage() {
 
         {error ? <div className="mb-4 rounded-lg border border-rose-500/30 bg-rose-950/40 p-3 text-sm text-rose-300">{error}</div> : null}
         {dnsRepairMessage ? <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-950/40 p-3 text-sm text-emerald-300">{dnsRepairMessage}</div> : null}
+        {!isReseller ? (
+          <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold">Proxy domains</h2>
+              <p className="text-sm text-slate-400">Add a Cloudflare zone and choose the default domain for new reseller users.</p>
+            </div>
+            <form className="grid gap-3 md:grid-cols-2 xl:grid-cols-5" onSubmit={handleCreateDomain}>
+              <input className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="Domain (example.com)" value={domainForm.domain} onChange={(e) => setDomainForm({ ...domainForm, domain: e.target.value })} required />
+              <input className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="Cloudflare Zone ID" value={domainForm.zone_id} onChange={(e) => setDomainForm({ ...domainForm, zone_id: e.target.value })} required />
+              <input className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="API Token" value={domainForm.api_token} onChange={(e) => setDomainForm({ ...domainForm, api_token: e.target.value })} />
+              <input className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="Legacy API Key" value={domainForm.api_key} onChange={(e) => setDomainForm({ ...domainForm, api_key: e.target.value })} />
+              <input className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" placeholder="API Email (for key)" value={domainForm.api_email} onChange={(e) => setDomainForm({ ...domainForm, api_email: e.target.value })} />
+              <button className="rounded-lg bg-cyan-500 px-4 py-2 font-medium text-slate-950 md:col-span-2 xl:col-span-5" type="submit">Add Domain</button>
+            </form>
+            {domainMessage ? <p className="mt-3 text-sm text-cyan-300">{domainMessage}</p> : null}
+            <div className="mt-4 grid gap-3">
+              {domains.map((domain) => (
+                <div key={domain.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-950/60 p-3">
+                  <div>
+                    <p className="font-semibold text-white">{domain.domain} {domain.is_default ? <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-1 text-xs text-emerald-300">Default</span> : null}</p>
+                    <p className="text-xs text-slate-400">Zone: {domain.zone_id} • {domain.has_api_token ? 'API token saved' : 'API key saved'}</p>
+                  </div>
+                  {!domain.is_default ? <button className="rounded-lg border border-cyan-500/40 px-3 py-2 text-sm text-cyan-300" onClick={() => handleSetDefaultDomain(domain.id)}>Make default</button> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {isReseller ? (
           <div className="space-y-6">

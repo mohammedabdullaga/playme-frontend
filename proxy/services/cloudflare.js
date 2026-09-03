@@ -1,17 +1,29 @@
-const { cfApiToken, cfApiKey, cfApiEmail, cfZoneId, baseDomain } = require('./config');
+const config = require('./config');
 
 const localRecords = new Map();
 const localRecordNames = new Map();
 
-function buildFqdn(subdomain) {
-  return `${subdomain}.${baseDomain}`;
+function resolveConfig(domainConfig = {}) {
+  return {
+    cfApiToken: domainConfig.api_token || config.cfApiToken,
+    cfApiKey: domainConfig.api_key || config.cfApiKey,
+    cfApiEmail: domainConfig.api_email || config.cfApiEmail,
+    cfZoneId: domainConfig.zone_id || config.cfZoneId,
+    baseDomain: domainConfig.domain || config.baseDomain,
+  };
 }
 
-async function createRecord(subdomain, ip) {
-  if ((!cfApiToken && (!cfApiKey || !cfApiEmail)) || !cfZoneId || !baseDomain) {
+function buildFqdn(subdomain, domainConfig) {
+  return `${subdomain}.${resolveConfig(domainConfig).baseDomain}`;
+}
+
+async function createRecord(subdomain, ip, domainConfig) {
+  const { cfApiToken, cfApiKey, cfApiEmail, cfZoneId } = resolveConfig(domainConfig);
+  const fqdn = buildFqdn(subdomain, domainConfig);
+  if ((!cfApiToken && (!cfApiKey || !cfApiEmail)) || !cfZoneId || !fqdn) {
     const recordId = `local-${subdomain}-${Date.now()}`;
-    localRecords.set(recordId, { subdomain, ip, name: buildFqdn(subdomain) });
-    localRecordNames.set(subdomain, recordId);
+    localRecords.set(recordId, { subdomain, ip, name: fqdn });
+    localRecordNames.set(fqdn, recordId);
     return recordId;
   }
   const headers = {};
@@ -29,7 +41,7 @@ async function createRecord(subdomain, ip) {
       headers,
       body: JSON.stringify({
         type: 'A',
-        name: buildFqdn(subdomain),
+        name: fqdn,
         content: ip,
         ttl: 120,
         proxied: false,
@@ -40,7 +52,7 @@ async function createRecord(subdomain, ip) {
     if (!response.ok) {
       const message = data?.errors?.[0]?.message || 'Cloudflare create record failed';
       if (message.includes('already exists')) {
-        const existingId = await findRecordId(subdomain);
+        const existingId = await findRecordId(subdomain, domainConfig);
         if (existingId) {
           return existingId;
         }
@@ -48,8 +60,8 @@ async function createRecord(subdomain, ip) {
       // If Cloudflare complains about auth scheme, fall back to local record instead of throwing
       if (response.status === 405 || message.includes('Method not allowed for this authentication scheme')) {
         const recordId = `local-${subdomain}-${Date.now()}`;
-        localRecords.set(recordId, { subdomain, ip, name: buildFqdn(subdomain) });
-        localRecordNames.set(subdomain, recordId);
+        localRecords.set(recordId, { subdomain, ip, name: fqdn });
+        localRecordNames.set(fqdn, recordId);
         console.warn('Cloudflare auth scheme not supported by provided credentials, using local DNS fallback.');
         return recordId;
       }
@@ -60,23 +72,25 @@ async function createRecord(subdomain, ip) {
   } catch (err) {
     console.warn('Cloudflare createRecord error, falling back to local store:', err.message || err);
     const recordId = `local-${subdomain}-${Date.now()}`;
-    localRecords.set(recordId, { subdomain, ip, name: buildFqdn(subdomain) });
-    localRecordNames.set(subdomain, recordId);
+    localRecords.set(recordId, { subdomain, ip, name: fqdn });
+    localRecordNames.set(fqdn, recordId);
     return recordId;
   }
 }
 
-async function deleteRecord(recordId) {
+async function deleteRecord(recordId, domainConfig) {
   if (!recordId) {
     return true;
   }
 
   if (localRecords.has(recordId)) {
-    const { subdomain } = localRecords.get(recordId);
+    const { name } = localRecords.get(recordId);
     localRecords.delete(recordId);
-    localRecordNames.delete(subdomain);
+    localRecordNames.delete(name);
     return true;
   }
+
+  const { cfApiToken, cfApiKey, cfApiEmail, cfZoneId } = resolveConfig(domainConfig);
 
   if ((!cfApiToken && (!cfApiKey || !cfApiEmail)) || !cfZoneId) {
     return true;
@@ -117,9 +131,11 @@ async function deleteRecord(recordId) {
   }
 }
 
-async function findRecordId(subdomain) {
-  if (localRecordNames.has(subdomain)) {
-    return localRecordNames.get(subdomain);
+async function findRecordId(subdomain, domainConfig) {
+  const { cfApiToken, cfApiKey, cfApiEmail, cfZoneId } = resolveConfig(domainConfig);
+  const fqdn = buildFqdn(subdomain, domainConfig);
+  if (localRecordNames.has(fqdn)) {
+    return localRecordNames.get(fqdn);
   }
 
   if ((!cfApiToken && (!cfApiKey || !cfApiEmail)) || !cfZoneId) {
@@ -135,7 +151,7 @@ async function findRecordId(subdomain) {
   }
 
   try {
-    const response = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/dns_records?type=A&name=${encodeURIComponent(buildFqdn(subdomain))}`, {
+    const response = await fetch(`https://api.cloudflare.com/client/v4/zones/${cfZoneId}/dns_records?type=A&name=${encodeURIComponent(fqdn)}`, {
       method: 'GET',
       headers,
     });

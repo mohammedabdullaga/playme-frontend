@@ -3,13 +3,15 @@ const { db } = require('../db/connection');
 const { authenticateToken, requireRole } = require('./auth');
 const { createRecord, deleteRecord } = require('../services/cloudflare');
 const { baseDomain } = require('../services/config');
+const { getDefaultDomain, getDomainById } = require('../services/domains');
 
 const router = express.Router();
 router.use(authenticateToken);
 router.use(requireRole('admin'));
 
 async function buildConfig(user, proxy) {
-  const server = `${user.subdomain}.${baseDomain}`;
+  const domain = user.domain_id ? getDomainById(user.domain_id) : null;
+  const server = `${user.subdomain}.${domain?.domain || baseDomain}`;
   const appletvBase64 = `socks://${proxy.username}:${proxy.password}@${server}:${proxy.port}`;
 
   return {
@@ -38,8 +40,9 @@ function generateSubdomain() {
 
 router.get('/', (req, res) => {
   const users = db.prepare(`
-    SELECT u.*, r.username AS reseller_username, p.label AS proxy_label, p.ip AS proxy_ip, p.port AS proxy_port, p.protocol AS proxy_protocol
+    SELECT u.*, d.domain AS assigned_domain, r.username AS reseller_username, p.label AS proxy_label, p.ip AS proxy_ip, p.port AS proxy_port, p.protocol AS proxy_protocol
     FROM users u
+    LEFT JOIN proxy_domains d ON d.id = u.domain_id
     LEFT JOIN admins r ON r.id = u.reseller_id
     LEFT JOIN proxies p ON p.id = u.proxy_id
     ORDER BY u.id DESC
@@ -50,7 +53,7 @@ router.get('/', (req, res) => {
 router.post('/repair-dns', async (req, res, next) => {
   try {
     const activeUsers = db.prepare(`
-      SELECT u.id, u.subdomain, u.proxy_id, p.ip AS proxy_ip
+      SELECT u.id, u.subdomain, u.proxy_id, u.domain_id, p.ip AS proxy_ip
       FROM users u
       LEFT JOIN proxies p ON p.id = u.proxy_id
       WHERE u.status = ?
@@ -66,7 +69,7 @@ router.post('/repair-dns', async (req, res, next) => {
         continue;
       }
 
-      const recordId = await createRecord(user.subdomain, user.proxy_ip);
+      const recordId = await createRecord(user.subdomain, user.proxy_ip, getDomainById(user.domain_id));
       db.prepare('UPDATE users SET cf_record_id = ? WHERE id = ?').run(recordId, user.id);
       repaired.push({ id: user.id, subdomain: user.subdomain, record_id: recordId });
     }
@@ -109,11 +112,12 @@ router.post('/', async (req, res, next) => {
       attempts += 1;
     }
 
-    const recordId = await createRecord(subdomain, proxy.ip);
+    const domain = getDefaultDomain();
+    const recordId = await createRecord(subdomain, proxy.ip, domain);
     const result = db.prepare(`
-      INSERT INTO users (proxy_id, whatsapp, subdomain, cf_record_id, expires_at, status)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(proxy_id, whatsapp, subdomain, recordId, expires_at, 'active');
+      INSERT INTO users (proxy_id, whatsapp, subdomain, domain_id, cf_record_id, expires_at, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(proxy_id, whatsapp, subdomain, domain?.id || null, recordId, expires_at, 'active');
 
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     const responsePayload = await buildConfig(user, proxy);
@@ -150,7 +154,7 @@ router.post('/:id/disable', async (req, res, next) => {
     }
 
     if (user.cf_record_id) {
-      await deleteRecord(user.cf_record_id);
+      await deleteRecord(user.cf_record_id, getDomainById(user.domain_id));
     }
 
     db.prepare('UPDATE users SET cf_record_id = NULL, status = ? WHERE id = ?').run('disabled', user.id);
@@ -168,7 +172,7 @@ router.delete('/:id', async (req, res, next) => {
     }
 
     if (user.cf_record_id) {
-      await deleteRecord(user.cf_record_id);
+      await deleteRecord(user.cf_record_id, getDomainById(user.domain_id));
     }
 
     db.prepare('DELETE FROM audit_logs WHERE user_id = ?').run(user.id);
@@ -193,7 +197,7 @@ router.post('/:id/reactivate', async (req, res, next) => {
       return res.status(404).json({ error: 'Proxy not found' });
     }
 
-    const recordId = await createRecord(user.subdomain, proxy.ip);
+    const recordId = await createRecord(user.subdomain, proxy.ip, getDomainById(user.domain_id));
     db.prepare('UPDATE users SET cf_record_id = ?, expires_at = ?, status = ? WHERE id = ?').run(recordId, expires_at, 'active', user.id);
 
     const updated = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
