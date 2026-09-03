@@ -67,9 +67,11 @@ const strings = {
     lowPointsAction: 'حسنًا',
     lowPointsInlineReminder: (points) => `تذكير: رصيدك الحالي ${points} نقطة. يفضّل إعادة الشحن قريبًا.`,
     expiringSoonTitle: 'تذكير بانتهاء الصلاحية',
-    expiringSoonSubtitle: (days) => `حسابات البروكسي التي ستنتهي خلال ${days} أيام القادمة.`,
+    expiringSoonSubtitle: (days) => `حسابات البروكسي القريبة من الانتهاء أو التي انتهت خلال ${days} أيام الماضية.`,
     expiringSoonCount: 'قريبًا',
-    noExpiringSoon: 'لا توجد حسابات بروكسي ستنتهي قريبًا.',
+    noExpiringSoon: 'لا توجد حسابات بروكسي قريبة الانتهاء أو منتهية.',
+    expiringAccount: 'قريب الانتهاء',
+    expiredAccount: 'منتهي',
   },
   en: {
     panelTitle: 'Reseller Panel',
@@ -136,9 +138,11 @@ const strings = {
     lowPointsAction: 'Got it',
     lowPointsInlineReminder: (points) => `Reminder: your current balance is ${points} points. Recharge soon.`,
     expiringSoonTitle: 'Expiring soon',
-    expiringSoonSubtitle: (days) => `Proxy accounts expiring within the next ${days} days.`,
+    expiringSoonSubtitle: (days) => `Proxy accounts expiring within the next ${days} days or already expired.`,
     expiringSoonCount: 'soon',
-    noExpiringSoon: 'No proxy accounts are expiring soon.',
+    noExpiringSoon: 'No proxy accounts are expiring soon or already expired.',
+    expiringAccount: 'Expiring soon',
+    expiredAccount: 'Expired',
   },
 };
 

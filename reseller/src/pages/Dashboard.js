@@ -61,6 +61,11 @@ function isExpiringSoon(expiresAt) {
   return !Number.isNaN(expiry) && expiry >= Date.now() && expiry <= Date.now() + SOON_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 }
 
+function isExpired(expiresAt) {
+  const expiry = new Date(expiresAt).getTime();
+  return !Number.isNaN(expiry) && expiry < Date.now();
+}
+
 const navLinkStyle = {
   padding: '9px 14px',
   borderRadius: 10,
@@ -296,7 +301,7 @@ export default function Dashboard() {
   const totalCost = pointCost * Number(count);
   const proxyCost = Number(pricing.proxy_plan_costs?.[Number(proxyForm.plan_months)] ?? DEFAULT_PROXY_PLAN_COSTS[Number(proxyForm.plan_months)] ?? 0);
   const canAffordProxy = points >= proxyCost;
-  const soonProxyUsers = proxyUsers.filter((user) => isExpiringSoon(user.expires_at));
+  const renewalReminderUsers = proxyUsers.filter((user) => isExpiringSoon(user.expires_at) || isExpired(user.expires_at));
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', padding: 16, direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
@@ -427,15 +432,16 @@ export default function Dashboard() {
                 <h3 style={{ margin: 0, color: '#9a3412' }}>{strings.expiringSoonTitle}</h3>
                 <p style={{ margin: '6px 0 0', color: '#7c2d12' }}>{strings.expiringSoonSubtitle(SOON_EXPIRY_DAYS)}</p>
               </div>
-              <span style={{ background: '#ffedd5', color: '#c2410c', borderRadius: 999, padding: '7px 11px', fontSize: 13, fontWeight: 700 }}>{soonProxyUsers.length} {strings.expiringSoonCount}</span>
+              <span style={{ background: '#ffedd5', color: '#c2410c', borderRadius: 999, padding: '7px 11px', fontSize: 13, fontWeight: 700 }}>{renewalReminderUsers.length} {strings.expiringSoonCount}</span>
             </div>
-            {soonProxyUsers.length === 0 ? (
+            {renewalReminderUsers.length === 0 ? (
               <p style={{ margin: '18px 0 0', color: '#64748b' }}>{strings.noExpiringSoon}</p>
             ) : (
               <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
-                {soonProxyUsers.map((user) => (
+                {renewalReminderUsers.map((user) => (
                   <div key={`proxy-${user.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 14px', borderRadius: 12, background: '#ffffff', border: '1px solid #fed7aa' }}>
                     <div><strong style={{ color: '#0f172a' }}>{user.whatsapp}</strong><div style={{ marginTop: 4, color: '#64748b', fontSize: 13 }}>{user.subdomain} • {strings.proxySectionTitle}</div></div>
+                    <span style={{ background: isExpired(user.expires_at) ? '#fee2e2' : '#ffedd5', color: isExpired(user.expires_at) ? '#b91c1c' : '#c2410c', borderRadius: 999, padding: '5px 9px', fontSize: 12, fontWeight: 700 }}>{isExpired(user.expires_at) ? strings.expiredAccount : strings.expiringAccount}</span>
                     <span style={{ color: '#c2410c', fontSize: 13 }}>{user.expires_at}</span>
                   </div>
                 ))}
