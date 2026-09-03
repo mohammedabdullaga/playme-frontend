@@ -1,11 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { cleanupOrphanDnsRecords, createDomain, createProxy, createResellerUser, deleteProxy, getAuditLogs, getDomains, getProxies, getResellerUserConfig, getResellerUsers, repairActiveSubdomains, setDefaultDomain, updateProxy } from '../api/client';
+import { cleanupOrphanDnsRecords, createDomain, createProxy, createResellerUser, deleteProxy, getAuditLogs, getDomains, getProxies, getResellerUserConfig, getResellerUsers, getUsers, repairActiveSubdomains, setDefaultDomain, updateProxy } from '../api/client';
+
+const SOON_EXPIRY_DAYS = 7;
+
+function isExpiringSoon(expiresAt, days = SOON_EXPIRY_DAYS) {
+  const expiry = new Date(expiresAt).getTime();
+  if (Number.isNaN(expiry)) return false;
+  const now = Date.now();
+  return expiry >= now && expiry <= now + days * 24 * 60 * 60 * 1000;
+}
+
+function isExpired(expiresAt) {
+  const expiry = new Date(expiresAt).getTime();
+  return !Number.isNaN(expiry) && expiry < Date.now();
+}
 
 export default function DashboardPage() {
   const { token, user, signOut } = useAuth();
   const isReseller = user?.role === 'reseller';
   const [proxies, setProxies] = useState([]);
+  const [users, setUsers] = useState([]);
   const [resellerUsers, setResellerUsers] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +39,8 @@ export default function DashboardPage() {
   const [domains, setDomains] = useState([]);
   const [domainForm, setDomainForm] = useState({ domain: '', zone_id: '', api_token: '', api_key: '', api_email: '' });
   const [domainMessage, setDomainMessage] = useState('');
+  const [proxyFilter, setProxyFilter] = useState('all');
+  const [accountFilter, setAccountFilter] = useState('all');
 
   async function loadProxies() {
     try {
@@ -61,6 +78,14 @@ export default function DashboardPage() {
     }
   }
 
+  async function loadUsers() {
+    try {
+      setUsers(await getUsers(token));
+    } catch (err) {
+      setError(err.message || 'Failed to load accounts');
+    }
+  }
+
   async function loadDomains() {
     try {
       setDomains(await getDomains(token));
@@ -78,6 +103,7 @@ export default function DashboardPage() {
     }
 
     loadProxies();
+    loadUsers();
     loadAuditLogs();
     loadDomains();
   }, [token, isReseller]);
@@ -186,6 +212,27 @@ export default function DashboardPage() {
 
   const capacityLabel = useMemo(() => (proxy) => `${proxy.active_user_count ?? 0}/${proxy.max_users ?? 3}`, []);
 
+  const activeUsers = useMemo(() => users.filter((userEntry) => userEntry.status === 'active'), [users]);
+  const soonUsers = useMemo(() => activeUsers.filter((userEntry) => isExpiringSoon(userEntry.expires_at)), [activeUsers]);
+  const filteredUsers = useMemo(() => activeUsers.filter((userEntry) => {
+    if (accountFilter === 'soon') return isExpiringSoon(userEntry.expires_at);
+    if (accountFilter === 'far') return !isExpiringSoon(userEntry.expires_at) && !isExpired(userEntry.expires_at);
+    return true;
+  }), [accountFilter, activeUsers]);
+  const filteredProxies = useMemo(() => proxies.filter((proxy) => {
+    const proxyUsers = activeUsers.filter((userEntry) => String(userEntry.proxy_id) === String(proxy.id));
+    if (proxyFilter === 'soon') return proxyUsers.some((userEntry) => isExpiringSoon(userEntry.expires_at));
+    if (proxyFilter === 'available') return (proxy.active_user_count ?? 0) < (proxy.max_users ?? 3);
+    return true;
+  }), [activeUsers, proxyFilter, proxies]);
+  const stats = useMemo(() => ({
+    activeProxies: proxies.length,
+    activeAccounts: activeUsers.length,
+    soonAccounts: soonUsers.length,
+    availableSeats: proxies.reduce((total, proxy) => total + Math.max((proxy.max_users ?? 3) - (proxy.active_user_count ?? 0), 0), 0),
+    sales: auditLogs.filter((entry) => entry.action === 'create' || entry.action === 'renew').length,
+  }), [activeUsers, auditLogs, proxies, soonUsers]);
+
   return (
     <div className="min-h-screen bg-slate-950 p-6 text-slate-100">
       <div className="mx-auto max-w-7xl">
@@ -293,10 +340,36 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
+            <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4"><p className="text-xs uppercase tracking-wider text-slate-400">Active proxies</p><p className="mt-2 text-3xl font-semibold">{stats.activeProxies}</p></div>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4"><p className="text-xs uppercase tracking-wider text-slate-400">Active accounts</p><p className="mt-2 text-3xl font-semibold">{stats.activeAccounts}</p></div>
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-950/30 p-4"><p className="text-xs uppercase tracking-wider text-amber-300">Expiring in 7 days</p><p className="mt-2 text-3xl font-semibold text-amber-200">{stats.soonAccounts}</p></div>
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/30 p-4"><p className="text-xs uppercase tracking-wider text-emerald-300">Available seats</p><p className="mt-2 text-3xl font-semibold text-emerald-200">{stats.availableSeats}</p></div>
+              <div className="rounded-2xl border border-cyan-500/30 bg-cyan-950/30 p-4"><p className="text-xs uppercase tracking-wider text-cyan-300">Sales activity</p><p className="mt-2 text-3xl font-semibold text-cyan-200">{stats.sales}</p></div>
+            </div>
+            <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+              <div className="flex flex-wrap items-end gap-4">
+                <label className="grid gap-2 text-sm text-slate-300">Proxy filter
+                  <select className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" value={proxyFilter} onChange={(e) => setProxyFilter(e.target.value)}>
+                    <option value="all">All proxies</option>
+                    <option value="soon">Proxies with accounts expiring soon</option>
+                    <option value="available">Proxies with available seats</option>
+                  </select>
+                </label>
+                <label className="grid gap-2 text-sm text-slate-300">Account filter
+                  <select className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2" value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
+                    <option value="all">All active accounts</option>
+                    <option value="soon">Soon to expire (7 days)</option>
+                    <option value="far">Far from expiry</option>
+                  </select>
+                </label>
+                <p className="text-sm text-slate-400">Soon means an active account expiring within the next {SOON_EXPIRY_DAYS} days.</p>
+              </div>
+            </div>
             {loading ? <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-8 text-center text-slate-400">Loading proxies…</div> : (
               <>
                 <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {proxies.map((proxy) => {
+                  {filteredProxies.map((proxy) => {
                     const used = proxy.active_user_count ?? 0;
                     const max = proxy.max_users ?? 3;
                     const full = used >= max;
@@ -324,6 +397,24 @@ export default function DashboardPage() {
                       </div>
                     );
                   })}
+                </div>
+
+                <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div><h2 className="text-xl font-semibold">Accounts by expiry</h2><p className="text-sm text-slate-400">Review active accounts and prioritize renewals.</p></div>
+                    <span className="text-sm text-slate-400">Showing {filteredUsers.length}</span>
+                  </div>
+                  <div className="space-y-3">
+                    {filteredUsers.map((userEntry) => {
+                      const proxy = proxies.find((item) => String(item.id) === String(userEntry.proxy_id));
+                      const soon = isExpiringSoon(userEntry.expires_at);
+                      return <div key={userEntry.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                        <div><p className="font-medium text-white">{userEntry.whatsapp}</p><p className="text-sm text-slate-400">{userEntry.subdomain} • {proxy?.label || 'Unknown proxy'}</p></div>
+                        <span className={`rounded-full px-3 py-1 text-xs ${soon ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>{soon ? 'Soon to expire' : `Expires ${userEntry.expires_at}`}</span>
+                      </div>;
+                    })}
+                    {filteredUsers.length === 0 ? <p className="text-sm text-slate-400">No accounts match this filter.</p> : null}
+                  </div>
                 </div>
 
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
