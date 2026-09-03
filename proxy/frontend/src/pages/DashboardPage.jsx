@@ -290,6 +290,10 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
+            <div className="mb-3 flex flex-wrap gap-2">
+              <a className="rounded-lg bg-cyan-500 px-3 py-2 text-sm font-medium text-slate-950" href="/">Dashboard</a>
+              <a className="rounded-lg border border-cyan-500/40 px-3 py-2 text-sm text-cyan-300" href="/proxies">Proxy Management</a>
+            </div>
             <p className="text-sm uppercase tracking-[0.3em] text-cyan-400">{isReseller ? 'Reseller Portal' : 'Proxy Management'}</p>
             <h1 className="text-3xl font-semibold">{isReseller ? 'Proxy Reselling' : 'Proxies'}</h1>
           </div>
