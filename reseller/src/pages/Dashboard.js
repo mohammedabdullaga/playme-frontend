@@ -18,6 +18,7 @@ const DEFAULT_PROXY_PLAN_COSTS = {
 };
 
 const LOW_POINTS_THRESHOLD = 100;
+const SOON_EXPIRY_DAYS = 7;
 
 const labelStyle = {
   display: 'block',
@@ -53,6 +54,11 @@ function normalizeSocksUrl(config) {
   }
 
   return 'Not available';
+}
+
+function isExpiringSoon(expiresAt) {
+  const expiry = new Date(expiresAt).getTime();
+  return !Number.isNaN(expiry) && expiry >= Date.now() && expiry <= Date.now() + SOON_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 }
 
 const navLinkStyle = {
@@ -290,6 +296,7 @@ export default function Dashboard() {
   const totalCost = pointCost * Number(count);
   const proxyCost = Number(pricing.proxy_plan_costs?.[Number(proxyForm.plan_months)] ?? DEFAULT_PROXY_PLAN_COSTS[Number(proxyForm.plan_months)] ?? 0);
   const canAffordProxy = points >= proxyCost;
+  const soonProxyUsers = proxyUsers.filter((user) => isExpiringSoon(user.expires_at));
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', padding: 16, direction: lang === 'ar' ? 'rtl' : 'ltr' }}>
@@ -412,6 +419,28 @@ export default function Dashboard() {
                 </div>
               ) : null}
             </form>
+          </div>
+
+          <div style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffffff 100%)', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)', border: '1px solid #fed7aa' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+              <div>
+                <h3 style={{ margin: 0, color: '#9a3412' }}>{strings.expiringSoonTitle}</h3>
+                <p style={{ margin: '6px 0 0', color: '#7c2d12' }}>{strings.expiringSoonSubtitle(SOON_EXPIRY_DAYS)}</p>
+              </div>
+              <span style={{ background: '#ffedd5', color: '#c2410c', borderRadius: 999, padding: '7px 11px', fontSize: 13, fontWeight: 700 }}>{soonProxyUsers.length} {strings.expiringSoonCount}</span>
+            </div>
+            {soonProxyUsers.length === 0 ? (
+              <p style={{ margin: '18px 0 0', color: '#64748b' }}>{strings.noExpiringSoon}</p>
+            ) : (
+              <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
+                {soonProxyUsers.map((user) => (
+                  <div key={`proxy-${user.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 14px', borderRadius: 12, background: '#ffffff', border: '1px solid #fed7aa' }}>
+                    <div><strong style={{ color: '#0f172a' }}>{user.whatsapp}</strong><div style={{ marginTop: 4, color: '#64748b', fontSize: 13 }}>{user.subdomain} • {strings.proxySectionTitle}</div></div>
+                    <span style={{ color: '#c2410c', fontSize: 13 }}>{user.expires_at}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 12px 30px rgba(15,23,42,0.08)' }}>
