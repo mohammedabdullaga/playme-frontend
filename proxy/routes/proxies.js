@@ -1,6 +1,8 @@
 const express = require('express');
 const { db } = require('../db/connection');
 const { authenticateToken } = require('./auth');
+const { deleteRecord, findRecordId } = require('../services/cloudflare');
+const { getDomainById } = require('../services/domains');
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -67,17 +69,31 @@ router.put('/:id', (req, res) => {
   return res.json(updated);
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res, next) => {
   const { id } = req.params;
   const existing = db.prepare('SELECT * FROM proxies WHERE id = ?').get(id);
   if (!existing) {
     return res.status(404).json({ error: 'Proxy not found' });
   }
 
-  db.exec('BEGIN IMMEDIATE');
-
   try {
-    const userIds = db.prepare('SELECT id FROM users WHERE proxy_id = ?').all(id).map((user) => user.id);
+    const linkedUsers = db.prepare(`
+      SELECT id, subdomain, cf_record_id, domain_id
+      FROM users
+      WHERE proxy_id = ?
+    `).all(id);
+
+    for (const user of linkedUsers) {
+      const domain = getDomainById(user.domain_id);
+      const recordId = user.cf_record_id || await findRecordId(user.subdomain, domain);
+      if (recordId) {
+        await deleteRecord(recordId, domain);
+      }
+    }
+
+    db.exec('BEGIN IMMEDIATE');
+
+    const userIds = linkedUsers.map((user) => user.id);
     if (userIds.length > 0) {
       const placeholders = userIds.map(() => '?').join(',');
       db.prepare(`DELETE FROM audit_logs WHERE user_id IN (${placeholders})`).run(...userIds);
@@ -88,10 +104,14 @@ router.delete('/:id', (req, res) => {
     db.prepare('DELETE FROM proxies WHERE id = ?').run(id);
     db.exec('COMMIT');
 
-    return res.json({ deleted: true, id: Number(id) });
+    return res.json({ deleted: true, id: Number(id), dns_records_removed: linkedUsers.length });
   } catch (error) {
-    db.exec('ROLLBACK');
-    throw error;
+    try {
+      db.exec('ROLLBACK');
+    } catch (_rollbackError) {
+      // The transaction may not have started if DNS cleanup failed first.
+    }
+    return next(error);
   }
 });
 
